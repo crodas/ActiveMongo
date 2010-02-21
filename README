@@ -1,12 +1,19 @@
 Really simple ActiveRecord for MongoDB
+----------------------------------------
 
+This class is under development, don't use it yet.
+
+What it does now:
+
+- Handle MongoDB connection, conecting once when it is needed
 - Define a Collection as a class
 - Abstracts iteration over a dataset
 - Efficient save() which creates or updates efficiently (ussing $set, $pushAll, $pullAll) a record
-- Provides simple queries interface, but allows to get MongoCollection for complex queries
+- Provides simple queries interface, but allows to get MongoCollection for complex queries in sub-classes
 
 TODO:
-    - Added delete() method
+    - Add PHPDoc to abstract class 
+    - Add delete() method
     - Add support for filtering properties (to ensure data integrity)
-    - Added pre and post save Hooks
-    - Added efficient support for references to another Record, and an efficient way to load it (with one query if possible)
+    - Add pre and post save Hooks
+    - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
