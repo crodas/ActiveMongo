@@ -1,0 +1,12 @@
+Really simple ActiveRecord for MongoDB
+
+- Define a Collection as a class
+- Abstracts iteration over a dataset
+- Efficient save() which creates or updates efficiently (ussing $set, $pushAll, $pullAll) a record
+- Provides simple queries interface, but allows to get MongoCollection for complex queries
+
+TODO:
+    - Added delete() method
+    - Add support for filtering properties (to ensure data integrity)
+    - Added pre and post save Hooks
+    - Added efficient support for references to another Record, and an efficient way to load it (with one query if possible)
