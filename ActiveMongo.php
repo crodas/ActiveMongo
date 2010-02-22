@@ -1,5 +1,28 @@
 <?php
+/*
+  +----------------------------------------------------------------------+
+  | Copyright (c) 2009 The PHP Group                                     |
+  +----------------------------------------------------------------------+
+  | This source file is subject to version 3.0 of the PHP license,       |
+  | that is bundled with this package in the file LICENSE, and is        |
+  | available through the world-wide-web at the following url:           |
+  | http://www.php.net/license/3_0.txt.                                  |
+  | If you did not receive a copy of the PHP license and are unable to   |
+  | obtain it through the world-wide-web, please send a note to          |
+  | license@php.net so we can mail you a copy immediately.               |
+  +----------------------------------------------------------------------+
+  | Authors: Cesar Rodas <crodas@php.net>                                |
+  +----------------------------------------------------------------------+
+*/
 
+
+/**
+ *  FilterException
+ *
+ *  This is Exception is thrown if any validation
+ *  fails when save() is called.
+ *
+ */
 final class FilterException extends Exception 
 {
 }
@@ -23,14 +46,14 @@ abstract class ActiveMongo implements Iterator
     private static $_conn;
     private static $_db;
     private static $_host;
-    public  $_id;
     private $_current = array();
     private $_cursor  = null;
     private $_count   = 0;
+    public  $_id;
 
     /**
      *  Get Collection Name, by default the class name,
-     *  but you can override this function at the class itself to give
+     *  but you it can be override at the class itself to give
      *  a custom name.
      *
      *  @return string Colleciton Name
