@@ -10,10 +10,11 @@ What it does now:
 - Abstracts iteration over a dataset
 - Efficient save() which creates or updates efficiently (ussing $set, $pushAll, $pullAll) a record
 - Provides simple queries interface, but allows to get MongoCollection for complex queries in sub-classes
+- Delete current object, Drop() table
+- Support filtering per property
 
 TODO:
     - Add PHPDoc to abstract class 
-    - Add delete() method
-    - Add support for filtering properties (to ensure data integrity)
     - Add pre and post save Hooks
     - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
+    - Add Support for efficient updates on nested arrays

@@ -4,7 +4,11 @@ require "user.php";
 
 ActiveMongo::connect("activemongo_test");
 
-for ($i=0; $i < 50; $i++) {
+/* Create index (and therefore our collection) */
+$users = new Users;
+$users->setup();
+
+for ($i=0; $i < 500; $i++) {
     $user = new Users;
     $user->username = uniqid();
     $user->password = uniqid();
@@ -14,15 +18,16 @@ for ($i=0; $i < 50; $i++) {
 
 /* Simple selection */
 $users = new Users;
-$users->setup();
 $users->uid = 5;
 foreach ($users->find() as $id=>$u) {
-    var_dump('first loop', $id);
+    var_dump(array('first loop', $id, $u->password));
 }
 
 /* Complex selection, it gives you the control 
  * over MongoDB Collection
  */
 foreach ($users->my_selector() as $id => $user) {
-    var_dump($id, $user->uid);
+    var_dump(array($id, $user->uid, $user->password));
 }
+
+$users->drop();

@@ -1,5 +1,9 @@
 <?php
 
+final class FilterException extends Exception 
+{
+}
+
 /**
  *  Simple hack to avoid get private and protected variables
  *
@@ -88,9 +92,23 @@ abstract class ActiveMongo implements Iterator
                         $pull[$key] = array_values($toPull);
                     }
                 } else if(!isset($current[$key]) || $value !== $current[$key]) {
+                    $filter = array($this, "{$key}_filter");
+                    if (is_callable($filter)) {
+                        $filter = call_user_func_array($filter, array(&$value, isset($current[$key]) ? $current[$key] : null));
+                        if (!$filter) {
+                            throw new FilterException("{$key} filter failed");
+                        }
+                    }
                     $vars[$key] = $value;
                 }
             } else {
+                $filter = array($this, "{$key}_filter");
+                if (is_callable($filter)) {
+                    $filter = call_user_func_array($filter, array(&$value, null));
+                    if (!$filter) {
+                        throw new FilterException("{$key} filter failed");
+                    }
+                }
                 $vars[$key] = $value;
             }
         }
@@ -134,7 +152,7 @@ abstract class ActiveMongo implements Iterator
             unset($this->$key);
         }
 
-        /* Add our current resultset as our property object */
+        /* Add our current resultset as our object's property */
         foreach ($obj as $key => $value) {
             $this->$key = $value;
         }
@@ -153,7 +171,7 @@ abstract class ActiveMongo implements Iterator
 
     final function save($async=true)
     {
-        $update = isset($this->_id) && $this->_id;
+        $update = isset($this->_id) && $this->_id InstanceOf MongoID;
         $conn   = $this->_getCollection();
         $obj    = $this->get_vars($update);
         if (count($obj) == 0) {
@@ -172,9 +190,24 @@ abstract class ActiveMongo implements Iterator
         }
     }
 
+    final function delete()
+    {
+        if (isset($this->_id) && $this->_id InstanceOf MongoId) {
+            return $this->_getCollection()->remove(array('_id' => $this->_id));
+        }
+        return false;
+    }
+
+    final function drop()
+    {
+        $this->_getCollection()->drop();
+        $this->setResult(array());
+        $this->_cursor = null;
+    }
+
     final function valid()
     {
-        return is_object($this->_cursor) && $this->_cursor->valid();
+        return $this->_cursor InstanceOf MongoCursor && $this->_cursor->valid();
     }
 
     final function next()
