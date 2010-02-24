@@ -93,12 +93,6 @@ abstract class ActiveMongo implements Iterator
      */
     private $_cursor  = null;
     /**
-     *    Number of total documents in this recordset
-     *
-     *    @type int
-     */    
-    private $_count   = 0;
-    /**
      *    Current document ID
      *    
      *    @type MongoID
@@ -209,6 +203,24 @@ abstract class ActiveMongo implements Iterator
                 if (is_array($value) && isset($current[$key])) {
                     $toPush = array_diff($value, $current[$key]);
                     $toPull = array_diff($current[$key], $value);
+
+                    /* {{{ See if the current 'array' is an object
+                     * or an array. 
+                     */
+                    if (is_string(key($toPush))) {
+                        $property = $key.".".key($toPush);
+                        $vars[$property] = current($toPush);
+                        $toPush = array();
+                    }
+                    if (is_string(key($toPull))) {
+                        $property = $key.".".key($toPull);
+                        if (!isSet($vars[$property])) {
+                            $unset[$property] = 1;
+                        }
+                        $toPull = array();
+                    }
+                    /* }}} */
+
                     if (count($toPush) > 0) {
                         $push[$key] = array_values($toPush);
                     }
@@ -240,19 +252,22 @@ abstract class ActiveMongo implements Iterator
         /* Updated behaves in a diff. way */
         if ($update) {
             foreach (array_diff(array_keys($this->_current), array_keys($object)) as $property) {
+                if ($property == '_id') {
+                    continue;
+                }
                 $unset[$property] = 1;
             }
             if (count($vars) > 0) {
                 $vars = array('$set' => $vars);
+            }
+            if (count($unset) > 0) {
+                $vars['$unset'] = $unset;
             }
             if (count($push) > 0) {
                 $vars['$pushAll'] = $push;
             }
             if (count($pull) > 0) {
                 $vars['$pullAll'] = $pull;
-            }
-            if (count($unset) > 0) {
-                $vars['$unset'] = $unset;
             }
         } 
 
@@ -277,12 +292,7 @@ abstract class ActiveMongo implements Iterator
     final protected function setCursor(MongoCursor $obj)
     {
         $this->_cursor = $obj;
-        $this->_count  = $obj->count();
-        if ($this->_count) {
-            $this->setResult($obj->getNext());
-        } else {
-            $this->setResult(array());
-        }
+        $this->setResult($obj->getNext());
     }
     // }}}
 
@@ -320,7 +330,7 @@ abstract class ActiveMongo implements Iterator
         }
 
         /* Add our current resultset as our object's property */
-        foreach ($obj as $key => $value) {
+        foreach ((array)$obj as $key => $value) {
             $this->$key = $value;
         }
         
@@ -427,7 +437,7 @@ abstract class ActiveMongo implements Iterator
     final function count()
     {
         if ($this->valid()) {
-            return $this->_count;
+            return $this->_cursor->count();
         }
         return 0;
     }
