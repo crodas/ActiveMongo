@@ -263,7 +263,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // void setCursor(MongoCollection $obj) {{{
+    // void setCursor(MongoCursor $obj) {{{
     /**
      *  Set Cursor
      *
@@ -274,7 +274,7 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return void
      */
-    final protected function setCursor($obj)
+    final protected function setCursor(MongoCursor $obj)
     {
         $this->_cursor = $obj;
         $this->_count  = $obj->count();
@@ -283,6 +283,21 @@ abstract class ActiveMongo implements Iterator
         } else {
             $this->setResult(array());
         }
+    }
+    // }}}
+
+    // void reset() {{{
+    /**
+     *  Reset our Object, delete the current cursor if any, and reset
+     *  unsets the values.
+     *
+     *  @return void
+     */
+    final function reset()
+    {
+        $this->_count = 0;
+        $this->_cursor = null;
+        $this->setResult(array());
     }
     // }}}
 
@@ -323,7 +338,7 @@ abstract class ActiveMongo implements Iterator
      *
      *    @return object this
      */
-    final function find()
+    function find()
     {
         $vars = $this->getCurrentDocument();
         $res  = $this->_getCollection()->find($vars);
@@ -409,7 +424,7 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return int
      */
-    function count()
+    final function count()
     {
         if ($this->valid()) {
             return $this->_count;
