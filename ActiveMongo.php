@@ -278,7 +278,11 @@ abstract class ActiveMongo implements Iterator
     {
         $this->_cursor = $obj;
         $this->_count  = $obj->count();
-        $this->setResult($obj->getNext());
+        if ($this->_cursor) {
+            $this->setResult($obj->getNext());
+        } else {
+            $this->setResult(array());
+        }
     }
     // }}}
 
