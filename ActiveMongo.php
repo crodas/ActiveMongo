@@ -174,6 +174,23 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+
+    // int count() {{{
+    /**
+     *  Return the number of documents in the actual request. If
+     *  we're not in a request, it will return -1.
+     *
+     *  @return int
+     */
+    function count()
+    {
+        if ($this->valid()) {
+            return $this->_count;
+        }
+        return -1;
+    }
+    // }}}
+
     // array getCurrentDocument(bool $update) {{{
     /**
      *    Get Current Document    
@@ -278,7 +295,7 @@ abstract class ActiveMongo implements Iterator
     {
         $this->_cursor = $obj;
         $this->_count  = $obj->count();
-        if ($this->_cursor) {
+        if ($this->_count) {
             $this->setResult($obj->getNext());
         } else {
             $this->setResult(array());
