@@ -49,62 +49,62 @@ function get_object_vars_ex($obj)
  *
  *  Simple ActiveRecord pattern built on top of MongoDB
  *
- *	@author César D. Rodas <crodas@php.net>
+ *    @author César D. Rodas <crodas@php.net>
  *
  */
 abstract class ActiveMongo implements Iterator 
 {
 
-	// properties {{{
-	/**
-	 *	Current collections
-     *  	
-	 *	@type array
-	 */
+    // properties {{{
+    /**
+     *    Current collections
+     *      
+     *    @type array
+     */
     private static $_collections;
-	/**
-	 *	Current connection to MongoDB
-	 *
-	 *	@type MongoConnection
-	 */
+    /**
+     *    Current connection to MongoDB
+     *
+     *    @type MongoConnection
+     */
     private static $_conn;
-	/**
-	 *	Database name
-	 *
-	 *	@type string
-	 */
+    /**
+     *    Database name
+     *
+     *    @type string
+     */
     private static $_db;
-	/**
-	 *	Host name
-	 *
-	 *	@type string
-	 */
+    /**
+     *    Host name
+     *
+     *    @type string
+     */
     private static $_host;
-	/**
-	 *	Current document
-	 *
-	 *	@type array
-	 */
+    /**
+     *    Current document
+     *
+     *    @type array
+     */
     private $_current = array();
-	/**
-	 *	Result cursor
-	 *
-	 *	@type MongoCursor
-	 */
+    /**
+     *    Result cursor
+     *
+     *    @type MongoCursor
+     */
     private $_cursor  = null;
-	/**
-	 *	Number of total documents in this recordset
-	 *
-	 *	@type int
-	 */	
+    /**
+     *    Number of total documents in this recordset
+     *
+     *    @type int
+     */    
     private $_count   = 0;
-	/**
-	 *	Current document ID
-	 *	
-	 *	@type MongoID
-	 */
-	private $_id;
-	// }}}
+    /**
+     *    Current document ID
+     *    
+     *    @type MongoID
+     */
+    private $_id;
+    // }}}
 
     // string _getCollectionName() {{{
     /**
@@ -120,7 +120,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-	// void connection($db, $host) {{{
+    // void connection($db, $host) {{{
     /**
      *  Connect
      *
@@ -137,9 +137,9 @@ abstract class ActiveMongo implements Iterator
         self::$_host = $host;
         self::$_db   = $db;
     }
-	// }}}
+    // }}}
 
-	// MongoConnection _getConnection() {{{
+    // MongoConnection _getConnection() {{{
     /**
      *  Get Connection
      *
@@ -154,9 +154,9 @@ abstract class ActiveMongo implements Iterator
         }
         return self::$_conn->selectDB(self::$_db);
     }
-	// }}}
+    // }}}
 
-	// MongoCollection _getCollection() {{{
+    // MongoCollection _getCollection() {{{
     /**
      *  Get Collection
      *
@@ -172,22 +172,22 @@ abstract class ActiveMongo implements Iterator
         }
         return self::$_collections[$colName];
     }
-	// }}}
+    // }}}
 
-	// array getCurrentDocument(bool $update) {{{
-	/**
-	 *	Get Current Document	
-	 *
-	 *	Based on this object properties a new document (Array)
-	 *	is returned. If we're modifying an document, just the modified
-	 *	properties are included in this document, which uses $set,
-	 *	$unset, $pushAll and $pullAll.
-	 *
-	 *
-	 *	@param bool $update
-	 *
-	 *	@return array
-	 */
+    // array getCurrentDocument(bool $update) {{{
+    /**
+     *    Get Current Document    
+     *
+     *    Based on this object properties a new document (Array)
+     *    is returned. If we're modifying an document, just the modified
+     *    properties are included in this document, which uses $set,
+     *    $unset, $pushAll and $pullAll.
+     *
+     *
+     *    @param bool $update
+     *
+     *    @return array
+     */
     final protected function getCurrentDocument($update=false)
     {
         $vars    = array();
@@ -261,9 +261,9 @@ abstract class ActiveMongo implements Iterator
         }
         return $vars;
     }
-	// }}}
+    // }}}
 
-	// void setCursor(MongoCollection $obj) {{{
+    // void setCursor(MongoCollection $obj) {{{
     /**
      *  Set Cursor
      *
@@ -280,9 +280,9 @@ abstract class ActiveMongo implements Iterator
         $this->_count  = $obj->count();
         $this->setResult($obj->getNext());
     }
-	// }}}
+    // }}}
 
-	// void setResult(Array $obj) {{{
+    // void setResult(Array $obj) {{{
     /**
      *  Set Result
      *
@@ -308,17 +308,17 @@ abstract class ActiveMongo implements Iterator
         /* Save our record */
         $this->_current = $obj;
     }
-	// }}}
+    // }}}
 
-	// this find() {{{
-	/**
-	 *	Simple find
-	 *
-	 *	Really simple find, which uses this object properties
-	 *	for fast filtering
-	 *
-	 *	@return object this
-	 */
+    // this find() {{{
+    /**
+     *    Simple find
+     *
+     *    Really simple find, which uses this object properties
+     *    for fast filtering
+     *
+     *    @return object this
+     */
     final function find()
     {
         $vars = $this->getCurrentDocument();
@@ -326,23 +326,23 @@ abstract class ActiveMongo implements Iterator
         $this->setCursor($res);
         return $this;
     }
-	// }}}
+    // }}}
 
-	// void save(bool $async) {{{
-	/**
-	 *	Save
-	 *
-	 *	This method save the current document in MongoDB. If
-	 *	we're modifying a document, a update is performed, otherwise
-	 *	the document is inserted.
-	 *
-	 *	On updates, special operations such as $set, $pushAll, $pullAll
-	 *	and $unset in order to perform efficient updates
-	 *
-	 *	@param bool $async 
-	 *
-	 *	@return void
-	 */
+    // void save(bool $async) {{{
+    /**
+     *    Save
+     *
+     *    This method save the current document in MongoDB. If
+     *    we're modifying a document, a update is performed, otherwise
+     *    the document is inserted.
+     *
+     *    On updates, special operations such as $set, $pushAll, $pullAll
+     *    and $unset in order to perform efficient updates
+     *
+     *    @param bool $async 
+     *
+     *    @return void
+     */
     final function save($async=true)
     {
         $update = isset($this->_id) && $this->_id InstanceOf MongoID;
@@ -351,8 +351,8 @@ abstract class ActiveMongo implements Iterator
         if (count($obj) == 0) {
             return; /*nothing to do */
         }
-		/* PRE-save hook */
-		$this->pre_save($update ? 'update' : 'create', $obj);
+        /* PRE-save hook */
+        $this->pre_save($update ? 'update' : 'create', $obj);
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
             $conn->save($obj);
@@ -364,12 +364,12 @@ abstract class ActiveMongo implements Iterator
             $this->_id      = $obj['_id'];
             $this->_current = $obj; 
         }
-		/* post-save hook */
-		$this->on_save();
+        /* post-save hook */
+        $this->on_save();
     }
-	// }}}
+    // }}}
 
-	// bool delete() {{{
+    // bool delete() {{{
     /**
      *  Delete the current document
      *  
@@ -382,9 +382,9 @@ abstract class ActiveMongo implements Iterator
         }
         return false;
     }
-	// }}}
+    // }}}
 
-	// void drop() {{{
+    // void drop() {{{
     /**
      *  Delete the current colleciton and all its documents
      *  
@@ -396,117 +396,117 @@ abstract class ActiveMongo implements Iterator
         $this->setResult(array());
         $this->_cursor = null;
     }
-	// }}}
+    // }}}
 
-	// bool valid() {{{
-	/**
-	 *	Valid
-	 *
-	 *	Return if we're on an iteration and if it is still valid
-	 *
-	 *	@return true
-	 */
+    // bool valid() {{{
+    /**
+     *    Valid
+     *
+     *    Return if we're on an iteration and if it is still valid
+     *
+     *    @return true
+     */
     final function valid()
     {
         return $this->_cursor InstanceOf MongoCursor && $this->_cursor->valid();
     }
-	// }}}
+    // }}}
 
-	// bool next() {{{
-	/**
-	 *	Move to the next document
-	 *
-	 *	@return bool
-	 */
+    // bool next() {{{
+    /**
+     *    Move to the next document
+     *
+     *    @return bool
+     */
     final function next()
     {
         return $this->_cursor->next();
     }
-	// }}}
+    // }}}
 
-	// this current() {{{
-	/**
-	 *	Return the current object, and load the current document
-	 *	as this object property
-	 *
-	 *	@return object 
-	 */
+    // this current() {{{
+    /**
+     *    Return the current object, and load the current document
+     *    as this object property
+     *
+     *    @return object 
+     */
     final function current()
     { 
         $this->setResult($this->_cursor->current());
         return $this;
     }
-	// }}}
+    // }}}
 
-	// bool rewind() {{{
-	/**
-	 *	Go to the first document
-	 */
+    // bool rewind() {{{
+    /**
+     *    Go to the first document
+     */
     final function rewind()
     {
         return $this->_cursor->rewind();
     }
-	// }}}
+    // }}}
    
-	// string key() {{{
-	/**
-	 *	Return the current key
-	 *
-	 *	@return string
-	 */
+    // string key() {{{
+    /**
+     *    Return the current key
+     *
+     *    @return string
+     */
     final function key()
     {
         return $this->_cursor->key();
     }
-	// }}}
+    // }}}
 
-	// void pre_save($action, & $document) {{{
-	/**
-	 *	PRE-save Hook,
-	 *	
-	 *	This method is fired just before an insert or updated. The document
-	 *	is passed by reference, so it can be modified. Also if for instance
-	 *	one property is missing an Exception could be thrown to avoid 
-	 *	the insert.
-	 *
-	 *
-	 *	@param string $action	 Update or Create
-	 *	@param array  &$document Document that will be sent to MongoDB.
-	 *
-	 *	@return void
-	 */
-	protected function pre_save($action, Array &$document)
-	{
-	}
-	// }}}
+    // void pre_save($action, & $document) {{{
+    /**
+     *    PRE-save Hook,
+     *    
+     *    This method is fired just before an insert or updated. The document
+     *    is passed by reference, so it can be modified. Also if for instance
+     *    one property is missing an Exception could be thrown to avoid 
+     *    the insert.
+     *
+     *
+     *    @param string $action     Update or Create
+     *    @param array  &$document Document that will be sent to MongoDB.
+     *
+     *    @return void
+     */
+    protected function pre_save($action, Array &$document)
+    {
+    }
+    // }}}
 
-	// void on_save() {{{
-	/**
-	 *	On Save hook
-	 *
-	 *	This method is fired right after an insert is performed.
-	 *
-	 *	@return void
-	 */
-	protected function on_save()
-	{
-	}
-	// }}}
+    // void on_save() {{{
+    /**
+     *    On Save hook
+     *
+     *    This method is fired right after an insert is performed.
+     *
+     *    @return void
+     */
+    protected function on_save()
+    {
+    }
+    // }}}
 
-	// void on_iterate() {{{
-	/**
-	 *	On Iterate Hook
-	 *
-	 *	This method is fired right after a new document is loaded 
-	 *	from the recorset, it could be useful to load references to other 
-	 *	documents.
-	 *
-	 *	@return void
-	 */
-	protected function on_iterate()
-	{
-	}
-	// }}}
+    // void on_iterate() {{{
+    /**
+     *    On Iterate Hook
+     *
+     *    This method is fired right after a new document is loaded 
+     *    from the recorset, it could be useful to load references to other 
+     *    documents.
+     *
+     *    @return void
+     */
+    protected function on_iterate()
+    {
+    }
+    // }}}
 
 }
 
@@ -515,6 +515,6 @@ abstract class ActiveMongo implements Iterator
  * tab-width: 4
  * c-basic-offset: 4
  * End:
- * vim600: noet sw=4 ts=4 fdm=marker
- * vim<600: noet sw=4 ts=4
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
  */
