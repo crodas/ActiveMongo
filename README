@@ -12,9 +12,11 @@ What it does now:
 - Provides simple queries interface, but allows to get MongoCollection for complex queries in sub-classes
 - Delete current object, Drop() table
 - Support filtering per property
+- Support Hooks:
+    - pre_save($operation, Array &$document): Right before to perform and insert or update
+    - on_save(): When a document is saved
+    - on_iterate(): On iteration, when the cursor moves to the next document
 
 TODO:
-    - Add PHPDoc to abstract class 
-    - Add pre and post save Hooks
     - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
     - Add Support for efficient updates on nested arrays

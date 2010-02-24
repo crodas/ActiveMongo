@@ -49,7 +49,7 @@ class Users Extends ActiveMongo
         return true;
     }
 
-    function password_filter(&$value, &$past_value)
+    function password_filter(&$value, $past_value)
     {
         if (strlen($value) < 5) {
             throw new FilterException("Password is too sort");
