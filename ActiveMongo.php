@@ -43,6 +43,26 @@ function get_object_vars_ex($obj)
 }
 // }}}
 
+function array_diff_ex($arr1, $arr2)
+{
+    if (is_array(current($arr1)) && is_array(current($arr2))) {
+        $diff = array();
+        foreach ($arr1 as $key => $value) {
+            if (!isset($arr2[$key])) {
+                $diff[$key] = $value;
+            } else {
+                $c_diff = array_diff_ex($value, $arr2[$key]);
+                if ($c_diff) {
+                    $diff[$key] = $c_diff;
+                }
+            }
+        }
+        return $diff;
+    } else {
+        return array_diff($arr1, $arr2);
+    }
+}
+
 
 /**
  *  ActiveMongo
@@ -166,7 +186,65 @@ abstract class ActiveMongo implements Iterator
         }
         return self::$_collections[$colName];
     }
-    // }}}
+    // }}}zm
+
+    function getCurrentSubDocument(&$document, $parent_key, $values, $past_values)
+    {
+        $keys = array_merge(array_keys($values), array_keys($past_values));
+        $cmp  = is_string($keys[0]) ? 'is_string' : 'is_numeric';
+
+        foreach ($keys as $key) {
+            if (!$cmp($key)) {
+                return false;
+            }
+        }
+
+        if ($cmp == 'is_string') {
+            /**
+             *  The current property is a sub-document,
+             *  now we're looking for it's differences
+             *  
+             *  It behaves exactly as getCurrentDocument,
+             *  except this is simples (it doesn't support
+             *  yet filters)
+             */
+            foreach ($values as $key => $value) {
+                $super_key = "{$parent_key}.{$key}";
+                if (is_array($value)) {
+                    /**
+                     *  Inner document detected
+                     */
+                    if (!isset($past_values[$key]) || !is_array($past_values[$key])) {
+                        /**
+                         *  We're lucky, it is a new sub-document,
+                         *  we simple add it
+                         */
+                        $document['$set'][$super_key] = $value;
+                    } else {
+                        /**
+                         *  The is a document like this, we need
+                         *  to find out the differences to avoid
+                         *  network overhead. 
+                         */
+                        if (!$this->getCurrentSubDocument($document, $super_key, $value, $past_values[$key])) {
+                            return false;
+                        }
+                    }
+                    continue;
+                }
+                if (!isset($past_values[$key]) || $past_values[$key] != $value) {
+                    $document['$set'][$super_key] = $value;
+                }
+            }
+
+            foreach (array_diff(array_keys($past_values), array_keys($values)) as $key) {
+                $super_key = "{$parent_key}.{$key}";
+                $document['$unset'][$super_key] = 1;
+            }
+        }
+
+        return true;
+    }
 
     // array getCurrentDocument(bool $update) {{{
     /**
@@ -182,69 +260,56 @@ abstract class ActiveMongo implements Iterator
      *
      *    @return array
      */
-    final protected function getCurrentDocument($update=false)
+    final protected function getCurrentDocument($update=false, $current=false)
     {
-        $vars    = array();
-        $current = (array)$this->_current;
-        $push    = array();
-        $pull    = array();
-        $unset   = array();
-        $object  = get_object_vars_ex($this);
+        $vars   = array();
+        $object = get_object_vars_ex($this);
+
+        if (!$current) {
+            $current = (array)$this->_current;
+        }
 
         foreach ($object as $key => $value) {
             if (!$value) {
-                if ($update) {
-                    $unset[$key] = 1;
-                }
                 continue;
             }
-
             if ($update) {
                 if (is_array($value) && isset($current[$key])) {
-                    $toPush = array_diff($value, $current[$key]);
-                    $toPull = array_diff($current[$key], $value);
-
-                    /* {{{ See if the current 'array' is an object
-                     * or an array. 
+                    /**
+                     *  If the Field to update is an array, it has a different 
+                     *  behaviour other than $set and $unset. Fist, we need
+                     *  need to check if it is an array or document, because
+                     *  they can't be mixed.
+                     *
                      */
-                    if (is_string(key($toPush))) {
-                        $property = $key.".".key($toPush);
-                        $vars[$property] = current($toPush);
-                        $toPush = array();
+                    if (!is_array($current[$key])) {
+                        /**
+                         *  We're lucky, the field wasn't 
+                         *  an array previously.
+                         */
+                        $this->_call_filter($key, $value, $current[$key]);
+                        $vars['$set'][$key] = $value;
+                        continue;
                     }
-                    if (is_string(key($toPull))) {
-                        $property = $key.".".key($toPull);
-                        if (!isSet($vars[$property])) {
-                            $unset[$property] = 1;
-                        }
-                        $toPull = array();
-                    }
-                    /* }}} */
 
-                    if (count($toPush) > 0) {
-                        $push[$key] = array_values($toPush);
-                    }
-                    if (count($toPull) > 0) {
-                        $pull[$key] = array_values($toPull);
+                    if (!$this->getCurrentSubDocument($vars, $key, $value, $current[$key])) {
+                        throw new Exception("{$key}: Array and documents are not compatible");
                     }
                 } else if(!isset($current[$key]) || $value !== $current[$key]) {
-                    $filter = array($this, "{$key}_filter");
-                    if (is_callable($filter)) {
-                        $filter = call_user_func_array($filter, array(&$value, isset($current[$key]) ? $current[$key] : null));
-                        if (!$filter) {
-                            throw new FilterException("{$key} filter failed");
-                        }
-                    }
-                    $vars[$key] = $value;
+                    /**
+                     *  It is 'linear' field that has changed, or 
+                     *  has been modified.
+                     */
+                    $past_value = isset($current[$key]) ? $current[$key] : null;
+                    $this->_call_filter($key, $value, $past_value);
+                    $vars['$set'][$key] = $value;
                 }
             } else {
-                $filter = array($this, "{$key}_filter");
-                if (is_callable($filter)) {
-                    $filter = call_user_func_array($filter, array(&$value, null));
-                    if (!$filter) {
-                        throw new FilterException("{$key} filter failed");
-                    }
-                }
+                /**
+                 *  It is a document insertation, so we 
+                 *  create the document.
+                 */
+                $this->_call_filter($key, $value, null);
                 $vars[$key] = $value;
             }
         }
@@ -255,19 +320,7 @@ abstract class ActiveMongo implements Iterator
                 if ($property == '_id') {
                     continue;
                 }
-                $unset[$property] = 1;
-            }
-            if (count($vars) > 0) {
-                $vars = array('$set' => $vars);
-            }
-            if (count($unset) > 0) {
-                $vars['$unset'] = $unset;
-            }
-            if (count($push) > 0) {
-                $vars['$pushAll'] = $push;
-            }
-            if (count($pull) > 0) {
-                $vars['$pullAll'] = $pull;
+                $vars['$unset'][$property] = 1;
             }
         } 
 
@@ -275,6 +328,30 @@ abstract class ActiveMongo implements Iterator
             return array();
         }
         return $vars;
+    }
+    // }}}
+
+    // void _call_filter(string $key, mixed &$value, mixed $past_value) {{{
+    /**
+     *  *Internal Method* 
+     *
+     *  This method check if the current document property has
+     *  a filter method, if so, call it.
+     *  
+     *  If the filter returns false, throw an Exception.
+     *
+     *  @return void
+     */
+    private function _call_filter($key, &$value, $past_value)
+    {
+        $filter = array($this, "{$key}_filter");
+        if (is_callable($filter)) {
+            $filter = call_user_func_array($filter, array(&$value, $past_value));
+            if ($filter===false) {
+                throw new FilterException("{$key} filter failed");
+            }
+            $this->$key = $value;
+        }
     }
     // }}}
 
