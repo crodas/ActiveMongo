@@ -8,10 +8,11 @@ What it does now:
 - Handle MongoDB connection, conecting once when it is needed
 - Define a Collection as a class
 - Abstracts iteration over a dataset
-- Efficient save() which creates or updates efficiently (ussing $set, $pushAll, $pullAll) a record
+- Efficient save() which creates or updates efficiently (using $unset, $set) a record
 - Provides simple queries interface, but allows to get MongoCollection for complex queries in sub-classes
 - Delete current object, Drop() table
 - Support filtering per property
+- Support for efficient updates on nested documents
 - Support Hooks:
     - pre_save($operation, Array &$document): Right before to perform and insert or update
     - on_save(): When a document is saved
@@ -19,4 +20,3 @@ What it does now:
 
 TODO:
     - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
-    - Add Support for efficient updates on nested arrays
