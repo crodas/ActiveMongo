@@ -43,33 +43,17 @@ function get_object_vars_ex($obj)
 }
 // }}}
 
-function array_diff_ex($arr1, $arr2)
-{
-    if (is_array(current($arr1)) && is_array(current($arr2))) {
-        $diff = array();
-        foreach ($arr1 as $key => $value) {
-            if (!isset($arr2[$key])) {
-                $diff[$key] = $value;
-            } else {
-                $c_diff = array_diff_ex($value, $arr2[$key]);
-                if ($c_diff) {
-                    $diff[$key] = $c_diff;
-                }
-            }
-        }
-        return $diff;
-    } else {
-        return array_diff($arr1, $arr2);
-    }
-}
-
-
 /**
  *  ActiveMongo
  *
- *  Simple ActiveRecord pattern built on top of MongoDB
+ *  Simple ActiveRecord pattern built on top of MongoDB. This class
+ *  aims to provide easy iteration, data validation before update,
+ *  and efficient update.
  *
- *    @author César D. Rodas <crodas@php.net>
+ *  @author César D. Rodas <crodas@php.net>
+ *  @license PHP License
+ *  @package ActiveMongo
+ *  @version 1.0
  *
  */
 abstract class ActiveMongo implements Iterator 
@@ -188,63 +172,69 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}zm
 
-    function getCurrentSubDocument(&$document, $parent_key, $values, $past_values)
+    // bool getCurrentSubDocument(array &$document, string $parent_key, array $values, array $past_values) {{{
+    /**
+     *  Generate Sub-document
+     *
+     *  This method build the difference between the current sub-document,
+     *  and the origin one. If there is no difference, it would do nothing,
+     *  otherwise it would build a document containing the differences.
+     *
+     *  @param array  &$document    Document target
+     *  @param string $parent_key   Parent key name
+     *  @param array  $values       Current values 
+     *  @param array  $past_values  Original values
+     *
+     *  @return false
+     */
+    function getCurrentSubDocument(&$document, $parent_key, Array $values, Array $past_values)
     {
-        $keys = array_merge(array_keys($values), array_keys($past_values));
-        $cmp  = is_string($keys[0]) ? 'is_string' : 'is_numeric';
-
-        foreach ($keys as $key) {
-            if (!$cmp($key)) {
-                return false;
+        /**
+         *  The current property is a embedded-document,
+         *  now we're looking for differences with the 
+         *  previous value (because we're on an update).
+         *  
+         *  It behaves exactly as getCurrentDocument,
+         *  but this is simples (it doesn't support
+         *  yet filters)
+         */
+        foreach ($values as $key => $value) {
+            $super_key = "{$parent_key}.{$key}";
+            if (is_array($value)) {
+                /**
+                 *  Inner document detected
+                 */
+                if (!isset($past_values[$key]) || !is_array($past_values[$key])) {
+                    /**
+                     *  We're lucky, it is a new sub-document,
+                     *  we simple add it
+                     */
+                    $document['$set'][$super_key] = $value;
+                } else {
+                    /**
+                     *  This is a document like this, we need
+                     *  to find out the differences to avoid
+                     *  network overhead. 
+                     */
+                    if (!$this->getCurrentSubDocument($document, $super_key, $value, $past_values[$key])) {
+                        return false;
+                    }
+                }
+                continue;
+            }
+            if (!isset($past_values[$key]) || $past_values[$key] != $value) {
+                $document['$set'][$super_key] = $value;
             }
         }
 
-        if ($cmp == 'is_string') {
-            /**
-             *  The current property is a sub-document,
-             *  now we're looking for it's differences
-             *  
-             *  It behaves exactly as getCurrentDocument,
-             *  except this is simples (it doesn't support
-             *  yet filters)
-             */
-            foreach ($values as $key => $value) {
-                $super_key = "{$parent_key}.{$key}";
-                if (is_array($value)) {
-                    /**
-                     *  Inner document detected
-                     */
-                    if (!isset($past_values[$key]) || !is_array($past_values[$key])) {
-                        /**
-                         *  We're lucky, it is a new sub-document,
-                         *  we simple add it
-                         */
-                        $document['$set'][$super_key] = $value;
-                    } else {
-                        /**
-                         *  The is a document like this, we need
-                         *  to find out the differences to avoid
-                         *  network overhead. 
-                         */
-                        if (!$this->getCurrentSubDocument($document, $super_key, $value, $past_values[$key])) {
-                            return false;
-                        }
-                    }
-                    continue;
-                }
-                if (!isset($past_values[$key]) || $past_values[$key] != $value) {
-                    $document['$set'][$super_key] = $value;
-                }
-            }
-
-            foreach (array_diff(array_keys($past_values), array_keys($values)) as $key) {
-                $super_key = "{$parent_key}.{$key}";
-                $document['$unset'][$super_key] = 1;
-            }
+        foreach (array_diff(array_keys($past_values), array_keys($values)) as $key) {
+            $super_key = "{$parent_key}.{$key}";
+            $document['$unset'][$super_key] = 1;
         }
 
         return true;
     }
+    // }}}
 
     // array getCurrentDocument(bool $update) {{{
     /**
@@ -262,8 +252,8 @@ abstract class ActiveMongo implements Iterator
      */
     final protected function getCurrentDocument($update=false, $current=false)
     {
-        $vars   = array();
-        $object = get_object_vars_ex($this);
+        $document = array();
+        $object   = get_object_vars_ex($this);
 
         if (!$current) {
             $current = (array)$this->_current;
@@ -288,11 +278,11 @@ abstract class ActiveMongo implements Iterator
                          *  an array previously.
                          */
                         $this->_call_filter($key, $value, $current[$key]);
-                        $vars['$set'][$key] = $value;
+                        $document['$set'][$key] = $value;
                         continue;
                     }
 
-                    if (!$this->getCurrentSubDocument($vars, $key, $value, $current[$key])) {
+                    if (!$this->getCurrentSubDocument($document, $key, $value, $current[$key])) {
                         throw new Exception("{$key}: Array and documents are not compatible");
                     }
                 } else if(!isset($current[$key]) || $value !== $current[$key]) {
@@ -302,7 +292,7 @@ abstract class ActiveMongo implements Iterator
                      */
                     $past_value = isset($current[$key]) ? $current[$key] : null;
                     $this->_call_filter($key, $value, $past_value);
-                    $vars['$set'][$key] = $value;
+                    $document['$set'][$key] = $value;
                 }
             } else {
                 /**
@@ -310,7 +300,7 @@ abstract class ActiveMongo implements Iterator
                  *  create the document.
                  */
                 $this->_call_filter($key, $value, null);
-                $vars[$key] = $value;
+                $document[$key] = $value;
             }
         }
 
@@ -320,14 +310,14 @@ abstract class ActiveMongo implements Iterator
                 if ($property == '_id') {
                     continue;
                 }
-                $vars['$unset'][$property] = 1;
+                $document['$unset'][$property] = 1;
             }
         } 
 
-        if (count($vars) == 0) {
+        if (count($document) == 0) {
             return array();
         }
-        return $vars;
+        return $document;
     }
     // }}}
 
