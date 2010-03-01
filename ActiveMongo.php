@@ -165,12 +165,9 @@ abstract class ActiveMongo implements Iterator
     final protected function _getCollection()
     {
         $colName = $this->_getCollectionName();
-        if (!isset(self::$_collections[$colName])) {
-            self::$_collections[$colName] = self::_getConnection()->selectCollection($colName);
-        }
-        return self::$_collections[$colName];
+        return self::_getConnection()->selectCollection($colName);
     }
-    // }}}zm
+    // }}}
 
     // bool getCurrentSubDocument(array &$document, string $parent_key, array $values, array $past_values) {{{
     /**
