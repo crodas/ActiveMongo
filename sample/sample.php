@@ -27,7 +27,8 @@ for ($i=0; $i < 500; $i++) {
     $user = new Users;
     $user->username = uniqid();
     $user->password = uniqid();
-    $user->uid      = $i;
+    $user->uid      = rand(0,10000);
+    $user->karma    = rand(0, 20);
     $user->save(false); /* perform a non-safe but fast save() */
 }
 
@@ -44,5 +45,7 @@ foreach ($users->find() as $id=>$u) {
 foreach ($users->my_selector() as $id => $user) {
     var_dump(array($id, $user->uid, $user->password));
 }
+
+$users->mapreduce();
 
 $users->drop();

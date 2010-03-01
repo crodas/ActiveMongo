@@ -389,7 +389,7 @@ abstract class ActiveMongo implements Iterator
     final protected function setResult($obj)
     {
         /* Unsetting previous results, if any */
-        foreach (array_keys($this->_current) as $key) {
+        foreach ((array)array_keys($this->_current) as $key) {
             unset($this->$key);
         }
 

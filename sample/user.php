@@ -62,5 +62,19 @@ class Users Extends ActiveMongo
     {
         $this->_getCollection()->ensureIndex(array('uid' => 1), array('unique' => true, 'background' => true));
     }
+
+    function mapreduce()
+    {
+        $col = self::_getConnection();
+        $data = array(
+            'mapreduce' => 'users',
+            'map' => new MongoCode("emit(this.karma, this.uid);"),
+            'reduce' => new MongoCode("return 1;"),
+            'verbose' => true,
+            'out' => 'salida',
+        );
+        $salida = $col->command($data);
+        var_dump($salida);
+    }
 }
 
