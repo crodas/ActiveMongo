@@ -118,6 +118,31 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // void install() {{{
+    /**
+     *  Install.
+     *
+     *  This static method iterate over the classes lists,
+     *  and execute the setup() method on every ActiveMongo
+     *  subclass. You should do this just once.
+     *
+     */
+    final public static function install()
+    {
+        $classes = array_reverse(get_declared_classes());
+        foreach ($classes as $class)
+        {
+            if ($class == 'ActiveMongo') {
+                break;
+            }
+            if (is_subclass_of($class, 'ActiveMongo')) {
+                $obj = new $class;
+                $obj->setup();
+            }
+        }
+    }
+    // }}}
+
     // void connection($db, $host) {{{
     /**
      *  Connect
@@ -389,7 +414,7 @@ abstract class ActiveMongo implements Iterator
     final protected function setResult($obj)
     {
         /* Unsetting previous results, if any */
-        foreach ((array)array_keys($this->_current) as $key) {
+        foreach (array_keys((array)$this->_current) as $key) {
             unset($this->$key);
         }
 
@@ -403,7 +428,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // this find() {{{
+    // this find([$_id]) {{{
     /**
      *    Simple find
      *
@@ -412,9 +437,12 @@ abstract class ActiveMongo implements Iterator
      *
      *    @return object this
      */
-    function find()
+    function find(MongoID $_id = null)
     {
         $vars = $this->getCurrentDocument();
+        if ($_id != null) {
+            $vars['_id'] = $_id;
+        }
         $res  = $this->_getCollection()->find($vars);
         $this->setCursor($res);
         return $this;
@@ -458,7 +486,11 @@ abstract class ActiveMongo implements Iterator
             $this->_current = $obj; 
         }
         /* post-save hook */
-        $this->on_save();
+        if ($update) {
+            $this->on_update();
+        } else {
+            $this->on_save();
+        }
     }
     // }}}
 
@@ -556,6 +588,22 @@ abstract class ActiveMongo implements Iterator
         return $this->_cursor->rewind();
     }
     // }}}
+
+    // getID() {{{
+    /**
+     *  Return the current document ID. If there is
+     *  no document it would return false.
+     *
+     *  @return object|false
+     */
+    final public function getID()
+    {
+        if ($this->_id instanceof MongoID) {
+            return $this->_id;
+        }
+        return false;
+    }
+    // }}}
    
     // string key() {{{
     /**
@@ -565,7 +613,7 @@ abstract class ActiveMongo implements Iterator
      */
     final function key()
     {
-        return $this->_cursor->key();
+        return $this->getID();
     }
     // }}}
 
@@ -602,6 +650,19 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // void on_update() {{{
+    /**
+     *    On Update hook
+     *
+     *    This method is fired right after an update is performed.
+     *
+     *    @return void
+     */
+    protected function on_update()
+    {
+    }
+    // }}}
+
     // void on_iterate() {{{
     /**
      *    On Iterate Hook
@@ -613,6 +674,17 @@ abstract class ActiveMongo implements Iterator
      *    @return void
      */
     protected function on_iterate()
+    {
+    }
+    // }}}
+
+    // setup() {{{
+    /**
+     *  This method should contain all the indexes, and shard keys
+     *  needed by the current collection. This try to make
+     *  installation on development environments easier.
+     */
+    function setup()
     {
     }
     // }}}

@@ -1,7 +1,15 @@
 Really simple ActiveRecord for MongoDB
 ----------------------------------------
 
-This class is under development, don't use it yet.
+MongoDB is a very powerful database, very performant and amicable. I wrote an article about it,
+
+http://www.phpclasses.org/blog/post/118-Developing-scalable-PHP-applications-using-MongoDB.html
+
+ActiveMongo, is a simple yet efficient MongoDB abstraction, following the ActiveRecord pattern. Visit http://crodas.org/activemongo.php for further details.
+
+
+Comments, patches, bug reports are welcome to the blog post, my personal e-mail address, crodas@php.net
+
 
 What it does now:
 
@@ -15,8 +23,10 @@ What it does now:
 - Support for efficient updates on nested documents
 - Support Hooks:
     - pre_save($operation, Array &$document): Right before to perform and insert or update
-    - on_save(): When a document is saved
+    - on_save(): When a document is created
+    - on_update(): When a document is updated
     - on_iterate(): On iteration, when the cursor moves to the next document
+- Support simple yet useful collection installation, useful to create indexes and shard keys.
 
 TODO:
     - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
