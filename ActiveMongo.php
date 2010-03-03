@@ -104,7 +104,7 @@ abstract class ActiveMongo implements Iterator
     private $_id;
     // }}}
 
-    // string _getCollectionName() {{{
+    // string getCollectionName() {{{
     /**
      *  Get Collection Name, by default the class name,
      *  but you it can be override at the class itself to give
@@ -112,7 +112,7 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return string Colleciton Name
      */
-    protected function _getCollectionName()
+    protected function getCollectionName()
     {
         return strtolower(get_class($this));
     }
@@ -189,7 +189,7 @@ abstract class ActiveMongo implements Iterator
      */
     final protected function _getCollection()
     {
-        $colName = $this->_getCollectionName();
+        $colName = $this->getCollectionName();
         return self::_getConnection()->selectCollection($colName);
     }
     // }}}
@@ -476,19 +476,14 @@ abstract class ActiveMongo implements Iterator
         $this->pre_save($update ? 'update' : 'create', $obj);
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
-            $conn->save($obj);
             foreach ($obj as $key => $value) {
                 $this->_current[$key] = $value;
             }
+            $this->on_update();
         } else {
             $conn->insert($obj, $async);
             $this->_id      = $obj['_id'];
             $this->_current = $obj; 
-        }
-        /* post-save hook */
-        if ($update) {
-            $this->on_update();
-        } else {
             $this->on_save();
         }
     }

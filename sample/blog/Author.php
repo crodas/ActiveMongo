@@ -10,6 +10,16 @@ class AuthorModel extends ActiveMongo
         return 'author';
     }
 
+    /**
+     *  Username filter.
+     *
+     *  - It must be unique (handled by MongoDB actually).
+     *  - It can't be changed.
+     *  - It must be /[a-z][a-z0-9\-\_]+/
+     *  - It must be longer than 5 letters.
+     *
+     *  @return bool
+     */
     function username_filter($value, $old_value)
     {
         if ($old_value!=null && $value != $old_value) {
@@ -23,8 +33,17 @@ class AuthorModel extends ActiveMongo
         if (strlen($value) < 5) {
             throw new Exception("Username too short");
         }
+
+        return true;
     }
 
+    /**
+     *  When an User updates his profile, we need to 
+     *  make sure that every post written by him is also
+     *  updated with his name and username.
+     *
+     *  @return void
+     */
     function on_update()
     {
         $post = new PostModel;
