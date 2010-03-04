@@ -132,10 +132,10 @@ abstract class ActiveMongo implements Iterator
         $classes = array_reverse(get_declared_classes());
         foreach ($classes as $class)
         {
-            if ($class == 'ActiveMongo') {
+            if ($class == __CLASS__) {
                 break;
             }
-            if (is_subclass_of($class, 'ActiveMongo')) {
+            if (is_subclass_of($class, __CLASS__)) {
                 $obj = new $class;
                 $obj->setup();
             }
