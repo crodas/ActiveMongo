@@ -1,0 +1,3 @@
+Simple Error logger
+
+This class will log all PHP Errors and Exceptions in MongoDB

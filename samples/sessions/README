@@ -1,0 +1,3 @@
+Sessions
+
+It override the default Session handler to store it in MongoDB
