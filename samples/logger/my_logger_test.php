@@ -9,7 +9,7 @@ ActiveMongo::connect("activemongo");
 
 My_Logger::Init();
 
-/* Generate erros */
+/* Generate errors */
 
 fopen("/foo-bar-file", "w");
 

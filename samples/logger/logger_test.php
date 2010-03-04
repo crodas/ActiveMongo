@@ -8,7 +8,7 @@ ActiveMongo::connect("activemongo");
 
 MongoLogger::Init();
 
-/* Generate erros */
+/* Generate errors */
 
 fopen("/foo-bar-file", "w");
 

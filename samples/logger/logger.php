@@ -67,5 +67,13 @@ class MongoLogger extends ActiveMongo
         $log->save(false);
     }
 
+    /**
+     *  Setup the indexes
+     */
+    function setup()
+    {
+        $collection = $this->_getCollection();
+        $collection->ensureIndex(array("type" => 1), array("background" => true));
+    }
 }
 
