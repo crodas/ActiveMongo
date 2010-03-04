@@ -87,8 +87,8 @@ class MongoSession extends ActiveMongo
     {
         $filter = array(
             'ts' => array(
-                '$lt' => new MongoDate(time()-$max_time);
-            );
+                '$lt' => new MongoDate(time()-$max_time),
+            )
         );
         $this->_getCollection->remove($filter);
     }
