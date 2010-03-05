@@ -24,6 +24,10 @@
   | EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED       |
   | WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          |
   | DISCLAIMED. IN NO EVENT SHALL CÉSAR D. RODAS BE LIABLE FOR ANY                  |
+  +---------------------------------------------------------------------------------+
+  | Authors: César Rodas <crodas@php.net>                                           |
+  +---------------------------------------------------------------------------------+
+*/
 
 class AuthorModel extends ActiveMongo
 {
@@ -77,7 +81,6 @@ class AuthorModel extends ActiveMongo
 
     function setup()
     {
-        $collection = & $this->_getCollection();
-        $collection->ensureIndex(array('username' => 1), array('unique'=> 1, 'background' => 1));
+        $this->addIndex(array('username' => 1), array('unique'=> 1));
     }
 }

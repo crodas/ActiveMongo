@@ -536,11 +536,14 @@ abstract class ActiveMongo implements Iterator
      *  
      *  @return void
      */
-    final function drop()
+    final static function drop()
     {
-        $this->_getCollection()->drop();
-        $this->setResult(array());
-        $this->_cursor = null;
+        $class = get_called_class();
+        if ($class == __CLASS__) {
+            return false;
+        }
+        $obj = new $class;
+        return $obj->_getCollection()->drop();
     }
     // }}}
 
@@ -709,6 +712,28 @@ abstract class ActiveMongo implements Iterator
     {
     }
     // }}}
+
+    final function addIndex($columns, $options=array())
+    {
+        $default_options = array(
+            'unique' => -1,
+            'background' => 1,
+        );
+        foreach ($default_options as $option => $value) {
+            if (!isset($options[$option])) {
+                $options[$option] = $value;
+            }
+        }
+
+        $collection = $this->_getCollection();
+
+        $collection->ensureIndex($columns, $options);
+    }
+
+    final protected function sendCmd($array)
+    {
+        return $this->_getConnection()->command($array);
+    }
 
 }
 
