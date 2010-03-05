@@ -420,6 +420,9 @@ abstract class ActiveMongo implements Iterator
 
         /* Add our current resultset as our object's property */
         foreach ((array)$obj as $key => $value) {
+            if ($key[0] == '$') {
+                continue;
+            }
             $this->$key = $value;
         }
         
@@ -477,6 +480,9 @@ abstract class ActiveMongo implements Iterator
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
             foreach ($obj as $key => $value) {
+                if ($key[0] == '$') {
+                    continue;
+                }
                 $this->_current[$key] = $value;
             }
             $this->on_update();
