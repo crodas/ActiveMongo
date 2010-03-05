@@ -108,8 +108,7 @@ class MongoLogger extends ActiveMongo
      */
     function setup()
     {
-        $collection = $this->_getCollection();
-        $collection->ensureIndex(array("type" => 1), array("background" => true));
+        $this->addIndex(array("type" => 1));
     }
 }
 

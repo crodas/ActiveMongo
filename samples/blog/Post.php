@@ -180,10 +180,9 @@ class PostModel extends ActiveMongo
 
     function setup()
     {
-        $collection = & $this->_getCollection();
-        $collection->ensureIndex(array('uri' => 1), array('unique'=> 1, 'background' => 1));
-        $collection->ensureIndex(array('author' => 1), array('background' => 1));
-        $collection->ensureIndex(array('ts' => -1), array('background' => 1));
+        $this->addIndex(array('uri' => 1), array('unique'=> 1));
+        $this->addIndex(array('author' => 1));
+        $this->addIndex(array('ts' => -1));
     }
 }
 

@@ -41,6 +41,9 @@ require "sessions.php";
 
 ActiveMongo::connect("activemongo");
 
+/* Should be done just once */
+ActiveMongo::install();
+
 MongoSession::init();
 
 session_start();

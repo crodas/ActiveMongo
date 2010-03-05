@@ -44,11 +44,15 @@ class MongoSession extends ActiveMongo
     public $valid;
     public $ts;
 
+    function getCollectionName()
+    {
+        return 'session';
+    }
+
     function setup()
     {
-        $collection = $this->_getCollection();
-        $collection->ensureIndex(array("sid" => 1, "valid" => 1), array("background" => 1));
-        $collection->ensureIndex(array("ts" => 1), array("background" => 1));
+        $this->addIndex(array("sid" => 1, "valid" => 1));
+        $this->addIndex(array("ts" => 1));
     }
 
     function pre_save($op, &$document)

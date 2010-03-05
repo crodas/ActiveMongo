@@ -210,7 +210,10 @@ abstract class ActiveMongo implements Iterator
     final protected function _getCollection()
     {
         $colName = $this->getCollectionName();
-        return self::_getConnection()->selectCollection($colName);
+        if (!isset(self::$_collections[$colName])) {
+            self::$_collections[$colName] = self::_getConnection()->selectCollection($colName);
+        }
+        return self::$_collections[$colName];
     }
     // }}}
 
@@ -702,7 +705,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // setup() {{{
+    // void setup() {{{
     /**
      *  This method should contain all the indexes, and shard keys
      *  needed by the current collection. This try to make
@@ -713,13 +716,24 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // bool addIndex(array $columns, array $options) {{{
+    /**
+     *  addIndex
+     *  
+     *  Create an Index in the current collection.
+     *
+     *  @param array $columns L ist of columns
+     *  @param array $options Options
+     *
+     *  @return bool
+     */
     final function addIndex($columns, $options=array())
     {
         $default_options = array(
-            'unique' => -1,
             'background' => 1,
         );
-        foreach ($default_options as $option => $value) {
+
+       foreach ($default_options as $option => $value) {
             if (!isset($options[$option])) {
                 $options[$option] = $value;
             }
@@ -727,13 +741,39 @@ abstract class ActiveMongo implements Iterator
 
         $collection = $this->_getCollection();
 
-        $collection->ensureIndex($columns, $options);
+        return $collection->ensureIndex($columns, $options);
     }
+    // }}}
 
-    final protected function sendCmd($array)
+    // string __toString() {{{
+    /**
+     *  To String
+     *
+     *  If this object is treated as a string,
+     *  it would return its ID.
+     *
+     *  @return string
+     */
+    final function __toString()
     {
-        return $this->_getConnection()->command($array);
+        return (string)$this->getID();
     }
+    // }}}
+
+    // array sendCmd(array $cmd) {{{
+    /**
+     *  This method sends a command to the current
+     *  database.
+     *
+     *  @param array $cmd Current command
+     *
+     *  @return array
+     */
+    final protected function sendCmd($cmd)
+    {
+        return $this->_getConnection()->command($cmd);
+    }
+    // }}}
 
 }
 
