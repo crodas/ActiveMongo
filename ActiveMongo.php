@@ -80,46 +80,52 @@ abstract class ActiveMongo implements Iterator
 {
 
     // properties {{{
+    /** 
+     *  Current databases objects
+     *
+     *  @type array
+     */
+    private static $_dbs;
     /**
-     *    Current collections
+     *  Current collections objects
      *      
-     *    @type array
+     *  @type array
      */
     private static $_collections;
     /**
-     *    Current connection to MongoDB
+     *  Current connection to MongoDB
      *
-     *    @type MongoConnection
+     *  @type MongoConnection
      */
     private static $_conn;
     /**
-     *    Database name
+     *  Database name
      *
-     *    @type string
+     *  @type string
      */
     private static $_db;
     /**
-     *    Host name
+     *  Host name
      *
-     *    @type string
+     *  @type string
      */
     private static $_host;
     /**
-     *    Current document
+     *  Current document
      *
-     *    @type array
+     *  @type array
      */
     private $_current = array();
     /**
-     *    Result cursor
+     *  Result cursor
      *
-     *    @type MongoCursor
+     *  @type MongoCursor
      */
     private $_cursor  = null;
     /**
-     *    Current document ID
+     *  Current document ID
      *    
-     *    @type MongoID
+     *  @type MongoID
      */
     private $_id;
     // }}}
@@ -130,11 +136,27 @@ abstract class ActiveMongo implements Iterator
      *  but you it can be override at the class itself to give
      *  a custom name.
      *
-     *  @return string Colleciton Name
+     *  @return string Collection Name
      */
     protected function getCollectionName()
     {
         return strtolower(get_class($this));
+    }
+    // }}}
+
+    // string getDatabaseName() {{{
+    /**
+     *  Get Database Name, by default it is used
+     *  the db name set by ActiveMong::connect()
+     *
+     *  @return string DB Name
+     */
+    protected function getDatabaseName()
+    {
+        if (is_null(self::$_db)) {
+            throw new MongoException("There is no information about the default DB name");
+        }
+        return self::$_db;
     }
     // }}}
 
@@ -190,12 +212,19 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return MongoConnection
      */
-    final protected static function _getConnection()
+    final protected function _getConnection()
     {
         if (is_null(self::$_conn)) {
+            if (is_null(self::$_host)) {
+                self::$_host = 'localhost';
+            }
             self::$_conn = new Mongo(self::$_host);
         }
-        return self::$_conn->selectDB(self::$_db);
+        $dbname = $this->getDatabaseName();
+        if (!isSet(self::$_dbs[$dbname])) {
+            self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
+        }
+        return self::$_dbs[$dbname];
     }
     // }}}
 
