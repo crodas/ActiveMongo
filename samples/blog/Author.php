@@ -60,7 +60,7 @@ class AuthorModel extends ActiveMongo
         }
 
         if (strlen($value) < 5) {
-            throw new Exception("Username too short");
+            throw new FilterException("Username too short");
         }
 
         return true;

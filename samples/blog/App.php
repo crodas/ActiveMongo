@@ -63,7 +63,7 @@ $author->save();
 $post = new PostModel;
 $post->uri = "/hello-world";
 $post->title  = "Hello World";
-$post->author = $author;
+$post->author = $author->getID();
 /* add one comment */
 $post->add_comment("testing", "root@foo.com", "testing comment");
 $post->save();
@@ -77,7 +77,7 @@ for ($i=0; $i < 1000; $i++) {
     $post = new PostModel;
     $post->uri = "/".uniqid();
     $post->title  = "Yet another post ($i)";
-    $post->author = $author;
+    $post->author = $author->getID();
     $post->save();
 }
 

@@ -128,6 +128,8 @@ abstract class ActiveMongo implements Iterator
      *  @type MongoID
      */
     private $_id;
+
+    private $_cloned = false;
     // }}}
 
     // string getCollectionName() {{{
@@ -261,7 +263,7 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return false
      */
-    function getCurrentSubDocument(&$document, $parent_key, Array $values, Array $past_values)
+    final function getCurrentSubDocument(&$document, $parent_key, Array $values, Array $past_values)
     {
         /**
          *  The current property is a embedded-document,
@@ -295,8 +297,7 @@ abstract class ActiveMongo implements Iterator
                     }
                 }
                 continue;
-            }
-            if (!isset($past_values[$key]) || $past_values[$key] != $value) {
+            } else if (!isset($past_values[$key]) || $past_values[$key] != $value) {
                 $document['$set'][$super_key] = $value;
             }
         }
@@ -332,6 +333,8 @@ abstract class ActiveMongo implements Iterator
         if (!$current) {
             $current = (array)$this->_current;
         }
+
+        $this->findReferences($object);
 
         foreach ($object as $key => $value) {
             if (!$value) {
@@ -485,18 +488,31 @@ abstract class ActiveMongo implements Iterator
 
     // this find([$_id]) {{{
     /**
-     *    Simple find
+     *    Simple find.
      *
      *    Really simple find, which uses this object properties
      *    for fast filtering
      *
      *    @return object this
      */
-    function find(MongoID $_id = null)
+    final function find($_id = null)
     {
-        $vars = $this->getCurrentDocument();
+        $vars = get_object_vars_ex($this);
+        foreach ($vars as $key => $value) {
+            if (!$value) {
+                unset($vars[$key]);
+            }
+            if ($value InstanceOf ActiveMongo) {
+                $this->getColumnDeference($vars, $key, $value);
+                unset($vars[$key]); /* delete old value */
+            }
+        }
         if ($_id != null) {
-            $vars['_id'] = $_id;
+            if (is_array($_id)) {
+                $vars['_id'] = array('$in' => $_id);
+            } else {
+                $vars['_id'] = $_id;
+            }
         }
         $res  = $this->_getCollection()->find($vars);
         $this->setCursor($res);
@@ -527,6 +543,7 @@ abstract class ActiveMongo implements Iterator
         if (count($obj) == 0) {
             return; /*nothing to do */
         }
+
         /* PRE-save hook */
         $this->pre_save($update ? 'update' : 'create', $obj);
         if ($update) {
@@ -595,6 +612,8 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // ITERATOR {{{
+
     // bool valid() {{{
     /**
      *    Valid
@@ -617,6 +636,9 @@ abstract class ActiveMongo implements Iterator
      */
     final function next()
     {
+        if ($this->_cloned) {
+            throw new MongoException("Cloned objects can't iterate");
+        }
         return $this->_cursor->next();
     }
     // }}}
@@ -644,6 +666,254 @@ abstract class ActiveMongo implements Iterator
         return $this->_cursor->rewind();
     }
     // }}}
+    
+    // }}}
+
+    // REFERENCES {{{
+
+    // array getReference() {{{
+    /**
+     *  ActiveMongo extended the Mongo references, adding
+     *  the concept of 'dynamic' requests, saving in the database
+     *  the current query with its options (sort, limit, etc).
+     *
+     *  This is useful to associate a document with a given 
+     *  request. To undestand this better please see the 'reference'
+     *  example.
+     *
+     *  @return array
+     */
+    final function getReference($dynamic=false)
+    {
+        if (!$this->getID()) {
+            return null;
+        }
+
+        $document = array(
+            '$ref'  => $this->getCollectionName(), 
+            '$id'   => $this->getID(),
+            '$db'   => $this->getDatabaseName(),
+            'class' => get_class($this),
+        );
+
+        if ($dynamic && $this->valid()) {
+            $cursor = $this->_cursor;
+            if (!is_callable(array($cursor, "getQuery"))) {
+                throw new Exception("Please upgrade your PECL/Mongo module to use this feature");
+            }
+            $document['dynamic'] = array();
+            $query  = $cursor->getQuery();
+            foreach ($query as $type => $value) {
+                $document['dynamic'][$type] = $value;
+            }
+        }
+        return $document;
+    }
+    // }}}
+
+    // void getCurrentReferences($document, &$refs) {{{
+    /**
+     *  Get Current References
+     *
+     *  Inspect the current document trying to get any references,
+     *  if any.
+     *
+     *  @param array $document   Current document
+     *  @param array &$refs      References found in the document.
+     *  @param array $parent_key Parent key
+     *
+     *  @return void
+     */
+    final protected function getCurrentReferences($document, &$refs, $parent_key=null)
+    {
+        foreach ($document as $key => $value) {
+           if (is_array($value)) {
+               if (MongoDBRef::isRef($value)) {
+                   $pkey   = $parent_key;
+                   $pkey[] = $key;
+                   $refs[] = array('ref' => $value, 'key' => $pkey);
+               } else {
+                   $parent_key[] = $key;
+                   $this->getCurrentReferences($value, $refs, $parent_key);
+               }
+           }
+        }
+    }
+    // }}}
+
+    // void doDeferencing() {{{
+    /**
+     *  Perform a deferencing in the current document, if there is
+     *  any reference.
+     *
+     *  ActiveMongo will do its best to group references queries as much 
+     *  as possible, in order to perform as less request as possible.
+     *
+     *  ActiveMongo doesn't rely on MongoDB references, but it can support 
+     *  it, but it is prefered to use our referencing.
+     *
+     *  @experimental
+     */
+    final function doDeferencing($refs=array())
+    {
+        /* Get current document */
+        $document = get_object_vars_ex($this);
+
+        if (count($refs)==0) {
+            /* Inspect the whole document */
+            $this->getCurrentReferences($document, $refs);
+        }
+
+        $db = $this->_getConnection();
+
+        /* Gather information about ActiveMongo Objects
+         * that we need to create
+         */
+        $classes = array();
+        foreach ($refs as $ref) {
+            if (!isset($ref['ref']['class'])) {
+
+                /* Support MongoDBRef {{{ */
+                /* MongoDB 'normal' reference */
+                /* Offset the current document to the right spot */
+                /* Very inefficient, never use it, instead use ActiveMongo References */
+                $obj = & $document;
+                foreach ($ref['key'] as $key) {
+                    $obj = & $obj[$key];
+                }
+                $obj = MongoDBRef::get($db, $ref['ref']);
+
+                /* Dirty hack, override our current document 
+                 * property with the value itself, in order to
+                 * avoid replace a MongoDB reference by its content
+                 */
+                $_obj = & $this->_current;
+                foreach ($ref['key'] as $key) {
+                    $_obj = & $_obj[$key];
+                }
+                $_obj = MongoDBRef::get($db, $ref['ref']);
+
+
+                /* Delete reference variable */
+                unset($obj, $_obj);
+                /* }}} */
+
+            } else {
+                /* ActiveMongo Reference FTW! */
+                $classes[$ref['ref']['class']][] = $ref;
+            }
+        }
+
+        /* {{{ Create needed objects to query MongoDB and replace
+         * our references by its objects documents. 
+         *
+         */
+        foreach ($classes as $class => $refs) {
+            $req = new $class;
+
+            /* Load list of IDs */
+            $ids = array();
+            foreach ($refs as $ref) {
+                $ids[] = $ref['ref']['$id'];
+            }
+
+            /* Search to MongoDB once for all IDs found */
+            $req->find($ids);
+
+            if ($req->count() != count($refs)) {
+                $total    = $req->count();
+                $expected = count($refs);
+                throw new MongoException("Dereferencing error, MongoDB replied {$total} objects, we expected {$expected}");
+            }
+
+            /* Replace our references by its objects */
+            foreach ($refs as $ref) {
+                $id    = $ref['ref']['$id'];
+                $place = $ref['key'];
+                $req->rewind();
+                while ($req->getID() != $id && $req->next());
+
+                assert($req->getID() == $id);
+
+                $obj = & $document;
+                foreach ($ref['key'] as $key) {
+                    $obj = & $obj[$key];
+                }
+                $obj = clone $req;
+
+                /* Delete reference variable */
+                unset($obj);
+            }
+
+            /* Release request, remember we
+             * safely cloned it,
+             */
+            unset($req);
+        }
+        // }}}
+
+        /* Replace the current document by the new deferenced objects */
+        foreach ($document as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+    // }}}
+
+    // void getColumnDeference(&$document, $propety, ActiveMongo Obj) {{{
+    /**
+     *  Prepare a "selector" document to search treaing the property
+     *  as a reference to the given ActiveMongo object.
+     *
+     */
+    final function getColumnDeference(&$document, $property, ActiveMongo $obj)
+    {
+        $document["{$property}.\$id"] = $obj->getID();
+    }
+    // }}}
+
+    // void findReferences(&$document) {{{
+    /**
+     *  Check if in the current document to insert or update
+     *  exists any references to other ActiveMongo Objects.
+     *
+     *  @return void
+     */
+    final function findReferences(&$document)
+    {
+        if (!is_array($document)) {
+            return;
+        }
+        foreach($document as &$value) {
+            if ($value InstanceOf ActiveMongo) {
+                $value = $value->getReference();
+            } else if (is_array($value)) {
+                $this->findReferences($value);
+            }
+        }
+        /* trick: delete last var. reference */
+        unset($value);
+    }
+    // }}}
+
+    // void __clone() {{{
+    /** 
+     *  Cloned objects are rarely used, but ActiveMongo
+     *  uses it to create different objects per everyrecord,
+     *  which is used at deferencing. Therefore cloned object
+     *  do not contains the recordset, just the actual document,
+     *  so iterations are not allowed.
+     *
+     */
+    final function __clone()
+    {
+        unset($this->_cursor);
+        $this->_cloned = true;
+    }
+    // }}}
+
+    // }}}
+
+    // GET DOCUMENT ID {{{
 
     // getID() {{{
     /**
@@ -672,6 +942,10 @@ abstract class ActiveMongo implements Iterator
         return $this->getID();
     }
     // }}}
+
+    // }}}
+
+    // HOOKS {{{
 
     // void pre_save($action, & $document) {{{
     /**
@@ -732,6 +1006,8 @@ abstract class ActiveMongo implements Iterator
     protected function on_iterate()
     {
     }
+    // }}}
+
     // }}}
 
     // void setup() {{{

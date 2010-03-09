@@ -112,13 +112,7 @@ class PostModel extends ActiveMongo
     function author_filter(&$value, $old_value)
     {
         if (!$value instanceof MongoID) {
-            if (!$value InstanceOf AuthorModel) {
-                throw new Exception("The author property must be an AuthorModel object");
-            }
-            $value = $value->getID();
-            if ($value === false) {
-                throw new Exception("The AuthorModel doesn't have any record");
-            }
+            throw new Exception("Invalid MongoID");
         }
         return true;
     }
