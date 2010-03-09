@@ -440,21 +440,6 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // void reset() {{{
-    /**
-     *  Reset our Object, delete the current cursor if any, and reset
-     *  unsets the values.
-     *
-     *  @return void
-     */
-    final function reset()
-    {
-        $this->_count = 0;
-        $this->_cursor = null;
-        $this->setResult(array());
-    }
-    // }}}
-
     // void setResult(Array $obj) {{{
     /**
      *  Set Result
@@ -613,6 +598,21 @@ abstract class ActiveMongo implements Iterator
     // }}}
 
     // ITERATOR {{{
+
+    // void reset() {{{
+    /**
+     *  Reset our Object, delete the current cursor if any, and reset
+     *  unsets the values.
+     *
+     *  @return void
+     */
+    final function reset()
+    {
+        $this->_count = 0;
+        $this->_cursor = null;
+        $this->setResult(array());
+    }
+    // }}}
 
     // bool valid() {{{
     /**
@@ -773,7 +773,7 @@ abstract class ActiveMongo implements Iterator
         foreach ($refs as $ref) {
             if (!isset($ref['ref']['class'])) {
 
-                /* Support MongoDBRef {{{ */
+                /* Support MongoDBRef, we do our best to be compatible {{{ */
                 /* MongoDB 'normal' reference */
                 /* Offset the current document to the right spot */
                 /* Very inefficient, never use it, instead use ActiveMongo References */
@@ -799,14 +799,17 @@ abstract class ActiveMongo implements Iterator
                 /* }}} */
 
             } else {
-                /* ActiveMongo Reference FTW! */
-                $classes[$ref['ref']['class']][] = $ref;
-            }
+
+                if (isset($class['$ref']['dynamic'])) {
+                    throw new MongoException("Dynamic deference is not yet implemented");
+                } else {
+                    /* ActiveMongo Reference FTW! */
+                    $classes[$ref['ref']['class']][] = $ref;
+                }
         }
 
         /* {{{ Create needed objects to query MongoDB and replace
          * our references by its objects documents. 
-         *
          */
         foreach ($classes as $class => $refs) {
             $req = new $class;

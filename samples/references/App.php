@@ -43,18 +43,23 @@ $user->save();
 /* Delete current objects */
 unset($user, $blg, $blg1, $twt);
 
+/* Output the document that is going to be sent to MongoDB */
 $debug=true;
 
-$user = new User;
-$user->username = "crodas";
-foreach ($user->find() as $u) {
-    $u->doDeferencing();
+$users = new User;
+$users->username = "crodas";
+foreach ($users->find() as $user) {
+    /* Load all references */
+    $user->doDeferencing();
+
+    /* Modify the first service */
     $user->services[0]->title = 'English Blog';
+
+    /* You need to save the referenced document */
+    /* explicitly */
     $user->services[0]->save();
+
+    /* Modify the current user */
+    $user->foobar = 'cesar';
+    $user->Save();
 }
-$user->foobar = 'cesar';
-$user->Save();
-
-
-
-

@@ -1,22 +1,21 @@
-Really simple ActiveRecord for MongoDB
+Really simple Activedocument for MongoDB
 ----------------------------------------
 
-MongoDB is a very powerful database, very performant and amicable. I wrote an article about it,
+MongoDB is a very powerful database, high performance and amicable. I wrote an article about it,
 
 http://www.phpclasses.org/blog/post/118-Developing-scalable-PHP-applications-using-MongoDB.html
 
-ActiveMongo, is a simple yet efficient MongoDB abstraction, following the ActiveRecord pattern. Visit http://crodas.org/activemongo.php for further details.
+ActiveMongo, is a simple yet efficient MongoDB abstraction, following the Activedocument pattern. Visit http://crodas.org/activemongo.php for further details.
+
+Comments, patches, bug reports are welcome to the blog post, my personal e-mail address, crodas@php.net 
 
 
-Comments, patches, bug reports are welcome to the blog post, my personal e-mail address, crodas@php.net
+ What it does now:
 
-
-What it does now:
-
-- Handle MongoDB connection, conecting once when it is needed
+- Handle MongoDB connection, connecting once when it is needed
 - Define a Collection as a class
 - Abstracts iteration over a dataset
-- Efficient save() which creates or updates efficiently (using $unset, $set) a record
+- Efficient save() which creates or updates efficiently (using $unset, $set) a document
 - Provides simple queries interface, but allows to get MongoCollection for complex queries in sub-classes
 - Delete current object, Drop() table
 - Support filtering per property
@@ -27,6 +26,10 @@ What it does now:
     - on_update(): When a document is updated
     - on_iterate(): On iteration, when the cursor moves to the next document
 - Support simple yet useful collection installation, useful to create indexes and shard keys.
+- Efficient references to another document, and an efficient way to load it (with one query if possible)
 
 TODO:
-    - Add efficient support for references to another Record, and an efficient way to load it (with one query if possible)
+
+- Dynamic deference
+- PHP Streams support for GridFS
+- Tools for setup and manage a sharded environment 
