@@ -129,8 +129,16 @@ abstract class ActiveMongo implements Iterator
      */
     private $_id;
 
+    /**
+     *  Tell if the current object
+     *  is cloned or not.
+     *
+     *  @type bool
+     */
     private $_cloned = false;
     // }}}
+
+    // GET CONNECTION CONFIG {{{
 
     // string getCollectionName() {{{
     /**
@@ -206,6 +214,8 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // }}}
+
     // MongoConnection _getConnection() {{{
     /**
      *  Get Connection
@@ -247,6 +257,8 @@ abstract class ActiveMongo implements Iterator
         return self::$_collections[$colName];
     }
     // }}}
+
+    // GET DOCUMENT TO SAVE OR UPDATE {{{
 
     // bool getCurrentSubDocument(array &$document, string $parent_key, array $values, array $past_values) {{{
     /**
@@ -422,6 +434,8 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
+    // }}}
+
     // void setCursor(MongoCursor $obj) {{{
     /**
      *  Set Cursor
@@ -487,7 +501,8 @@ abstract class ActiveMongo implements Iterator
             if (!$value) {
                 unset($vars[$key]);
             }
-            if ($value InstanceOf ActiveMongo) {
+            $parent_class = __CLASS__;
+            if ($value InstanceOf $parent_class) {
                 $this->getColumnDeference($vars, $key, $value);
                 unset($vars[$key]); /* delete old value */
             }
@@ -529,7 +544,7 @@ abstract class ActiveMongo implements Iterator
             return; /*nothing to do */
         }
 
-        /* PRE-save hook */
+         /* PRE-save hook */
         $this->pre_save($update ? 'update' : 'create', $obj);
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
@@ -685,7 +700,7 @@ abstract class ActiveMongo implements Iterator
      */
     final function getReference($dynamic=false)
     {
-        if (!$this->getID()) {
+        if (!$this->getID() && !$dynamic) {
             return null;
         }
 
@@ -696,7 +711,7 @@ abstract class ActiveMongo implements Iterator
             'class' => get_class($this),
         );
 
-        if ($dynamic && $this->valid()) {
+        if ($dynamic) {
             $cursor = $this->_cursor;
             if (!is_callable(array($cursor, "getQuery"))) {
                 throw new Exception("Please upgrade your PECL/Mongo module to use this feature");
@@ -711,7 +726,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // void getCurrentReferences($document, &$refs) {{{
+    // void getDocumentReferences($document, &$refs) {{{
     /**
      *  Get Current References
      *
@@ -724,7 +739,7 @@ abstract class ActiveMongo implements Iterator
      *
      *  @return void
      */
-    final protected function getCurrentReferences($document, &$refs, $parent_key=null)
+    final protected function getDocumentReferences($document, &$refs, $parent_key=null)
     {
         foreach ($document as $key => $value) {
            if (is_array($value)) {
@@ -734,10 +749,87 @@ abstract class ActiveMongo implements Iterator
                    $refs[] = array('ref' => $value, 'key' => $pkey);
                } else {
                    $parent_key[] = $key;
-                   $this->getCurrentReferences($value, $refs, $parent_key);
+                   $this->getDocumentReferences($value, $refs, $parent_key);
                }
            }
         }
+    }
+    // }}}
+
+    // object _deferencingCreateObject(string $class) {{{
+    /**
+     *  Called at deferencig time
+     *
+     *  Check if the given string is a class, and it is a sub class
+     *  of ActiveMongo, if it is instance and return the object.
+     *
+     *  @param string $class
+     *
+     *  @return object
+     */
+    private function _deferencingCreateObject($class)
+    {
+        if (!is_subclass_of($class, __CLASS__)) {
+            throw new MongoException("Fatal Error, imposible to create ActiveMongo object of {$class}");
+        }
+        return new $class;
+    }
+    // }}}
+
+    // void _deferencingRestoreProperty(array &$document, array $keys, mixed $req) {{{
+    /**
+     *  Called at deferencig time
+     *
+     *  This method iterates $document until it could match $keys path, and 
+     *  replace its value by $req.
+     *
+     *  @param array &$document Document to replace
+     *  @param array $keys      Path of property to change
+     *  @param mixed $req       Value to replace.
+     *
+     *  @return void
+     */
+    private function _deferencingRestoreProperty(&$document, $keys, $req)
+    {
+        $obj = & $document;
+
+        /* find the $req proper spot */
+        foreach ($keys as $key) {
+            $obj = & $obj[$key];
+        }
+
+        $obj = $req;
+
+        /* Delete reference variable */
+        unset($obj);
+    }
+    // }}}
+
+    // object _deferencingQuery($request) {{{
+    /**
+     *  Called at deferencig time
+     *  
+     *  This method takes a dynamic reference and request
+     *  it to MongoDB.
+     *
+     *  @param array $request Dynamic reference
+     *
+     *  @return this
+     */
+    private function _deferencingQuery($request)
+    {
+        $collection = $this->_getCollection();
+        $cursor     = $collection->find($request['query'], $request['fields']);
+        if ($request['limit'] > 0) {
+            $cursor->limit($request['limit']);
+        }
+        if ($request['skip'] > 0) {
+            $cursor->limit($request['limit']);
+        }
+
+        $this->setCursor($cursor);
+
+        return $this;
     }
     // }}}
 
@@ -761,7 +853,7 @@ abstract class ActiveMongo implements Iterator
 
         if (count($refs)==0) {
             /* Inspect the whole document */
-            $this->getCurrentReferences($document, $refs);
+            $this->getDocumentReferences($document, $refs);
         }
 
         $db = $this->_getConnection();
@@ -775,44 +867,59 @@ abstract class ActiveMongo implements Iterator
 
                 /* Support MongoDBRef, we do our best to be compatible {{{ */
                 /* MongoDB 'normal' reference */
+
+                $obj = MongoDBRef::get($db, $ref['ref']);
+
                 /* Offset the current document to the right spot */
                 /* Very inefficient, never use it, instead use ActiveMongo References */
-                $obj = & $document;
-                foreach ($ref['key'] as $key) {
-                    $obj = & $obj[$key];
-                }
-                $obj = MongoDBRef::get($db, $ref['ref']);
+
+                $this->_deferencingRestoreProperty($document, $ref['key'], clone $req);
 
                 /* Dirty hack, override our current document 
                  * property with the value itself, in order to
                  * avoid replace a MongoDB reference by its content
                  */
-                $_obj = & $this->_current;
-                foreach ($ref['key'] as $key) {
-                    $_obj = & $_obj[$key];
-                }
-                $_obj = MongoDBRef::get($db, $ref['ref']);
+                $this->_deferencingRestoreProperty($this->_current, $ref['key'], clone $req);
 
-
-                /* Delete reference variable */
-                unset($obj, $_obj);
                 /* }}} */
 
             } else {
 
-                if (isset($class['$ref']['dynamic'])) {
-                    throw new MongoException("Dynamic deference is not yet implemented");
+                if (isset($ref['ref']['dynamic'])) {
+                    /* ActiveMongo Dynamic Reference */
+
+                    /* Create ActiveMongo object */
+                    $req = $this->_deferencingCreateObject($ref['ref']['class']);
+                    
+                    /* Restore saved query */
+                    $req->_deferencingQuery($ref['ref']['dynamic']);
+                   
+                    $results = array();
+
+                    /* Add the result set */
+                    foreach ($req as $result) {
+                        $results[]  = clone $result;
+                    }
+
+                    /* add  information about the current reference */
+                    foreach ($ref['ref'] as $key => $value) {
+                        $results[$key] = $value;
+                    }
+
+                    $this->_deferencingRestoreProperty($document, $ref['key'], $results);
+
                 } else {
                     /* ActiveMongo Reference FTW! */
                     $classes[$ref['ref']['class']][] = $ref;
                 }
+            }
         }
 
         /* {{{ Create needed objects to query MongoDB and replace
          * our references by its objects documents. 
          */
         foreach ($classes as $class => $refs) {
-            $req = new $class;
+            $req = $this->_deferencingCreateObject($class);
 
             /* Load list of IDs */
             $ids = array();
@@ -838,13 +945,8 @@ abstract class ActiveMongo implements Iterator
 
                 assert($req->getID() == $id);
 
-                $obj = & $document;
-                foreach ($ref['key'] as $key) {
-                    $obj = & $obj[$key];
-                }
-                $obj = clone $req;
+                $this->_deferencingRestoreProperty($document, $place, clone $req);
 
-                /* Delete reference variable */
                 unset($obj);
             }
 
@@ -887,10 +989,26 @@ abstract class ActiveMongo implements Iterator
             return;
         }
         foreach($document as &$value) {
-            if ($value InstanceOf ActiveMongo) {
+            $parent_class = __CLASS__;
+            if (is_array($value)) {
+                if (MongoDBRef::isRef($value)) {
+                    /*  If the property we're inspecting is a reference,
+                     *  we need to remove the values, restoring the valid
+                     *  Reference.
+                     */
+                    $arr = array(
+                        '$ref'=>1, '$id'=>1, '$db'=>1, 'class'=>1, 'dynamic'=>1
+                    );
+                    foreach (array_keys($value) as $key) {
+                        if (!isset($arr[$key])) {
+                            unset($value[$key]);
+                        }
+                    }
+                } else {
+                    $this->findReferences($value);
+                }
+            } else if ($value InstanceOf $parent_class) {
                 $value = $value->getReference();
-            } else if (is_array($value)) {
-                $this->findReferences($value);
             }
         }
         /* trick: delete last var. reference */
