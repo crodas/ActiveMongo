@@ -73,7 +73,7 @@ class AuthorModel extends ActiveMongo
      *
      *  @return void
      */
-    function on_update()
+    function after_update()
     {
         $post = new PostModel;
         $post->updateAuthorInfo($this->getID());

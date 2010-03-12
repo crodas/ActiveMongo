@@ -11,10 +11,10 @@ abstract class Service extends ActiveMongo
     {
     }
 
-    function pre_save($op, $document)
+    function after_update($document)
     {
         if (isset($GLOBALS['debug'])) {
-            var_dump(array($op => get_class($this), 'doc' =>  $document));
+            var_dump(array(get_class($this) =>  $document));
         }
     }
 }

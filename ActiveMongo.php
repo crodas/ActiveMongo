@@ -346,7 +346,10 @@ abstract class ActiveMongo implements Iterator
             $current = (array)$this->_current;
         }
 
+
         $this->findReferences($object);
+
+        $this->before_validate($object);
 
         foreach ($object as $key => $value) {
             if (!$value) {
@@ -406,6 +409,9 @@ abstract class ActiveMongo implements Iterator
         if (count($document) == 0) {
             return array();
         }
+
+        $this->after_validate($document);
+
         return $document;
     }
     // }}}
@@ -545,7 +551,12 @@ abstract class ActiveMongo implements Iterator
         }
 
          /* PRE-save hook */
-        $this->pre_save($update ? 'update' : 'create', $obj);
+        if ($update) {
+            $this->before_update($obj);
+        } else {
+            $this->before_create($obj);
+        }
+
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
             foreach ($obj as $key => $value) {
@@ -554,12 +565,12 @@ abstract class ActiveMongo implements Iterator
                 }
                 $this->_current[$key] = $value;
             }
-            $this->on_update();
+            $this->after_update($obj);
         } else {
             $conn->insert($obj, $async);
             $this->_id      = $obj['_id'];
             $this->_current = $obj; 
-            $this->on_save();
+            $this->after_create($obj);
         }
     }
     // }}}
@@ -573,7 +584,10 @@ abstract class ActiveMongo implements Iterator
     final function delete()
     {
         if ($this->valid()) {
-            return $this->_getCollection()->remove(array('_id' => $this->_id));
+            $this->before_destroy();
+            $result = $this->_getCollection()->remove(array('_id' => $this->_id));
+            $this->after_destroy();
+            return $result;
         }
         return false;
     }
@@ -1068,48 +1082,40 @@ abstract class ActiveMongo implements Iterator
 
     // HOOKS {{{
 
-    // void pre_save($action, & $document) {{{
-    /**
-     *    PRE-save Hook,
-     *    
-     *    This method is fired just before an insert or updated. The document
-     *    is passed by reference, so it can be modified. Also if for instance
-     *    one property is missing an Exception could be thrown to avoid 
-     *    the insert.
-     *
-     *
-     *    @param string $action     Update or Create
-     *    @param array  &$document Document that will be sent to MongoDB.
-     *
-     *    @return void
-     */
-    protected function pre_save($action, Array &$document)
+    //  Saving {{{
+    protected function before_create(Array &$document)
+    {
+    }
+
+    protected function before_update(Array &$document)
+    {
+    }
+
+    protected function after_create()
+    {
+    }
+
+    protected function after_update()
     {
     }
     // }}}
 
-    // void on_save() {{{
-    /**
-     *    On Save hook
-     *
-     *    This method is fired right after an insert is performed.
-     *
-     *    @return void
-     */
-    protected function on_save()
+    // Destroing {{{
+    function before_destroy()
+    {
+    }
+
+    function after_destroy()
     {
     }
     // }}}
 
-    // void on_update() {{{
-    /**
-     *    On Update hook
-     *
-     *    This method is fired right after an update is performed.
-     *
-     *    @return void
-     */
-    protected function on_update()
+    // Validations {{{
+    function before_validate(Array &$document)
+    {
+    }
+
+    function after_validate(Array &$document)
     {
     }
     // }}}
@@ -1129,7 +1135,7 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // }}}
+    //}}}
 
     // void setup() {{{
     /**

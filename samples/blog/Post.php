@@ -90,11 +90,9 @@ class PostModel extends ActiveMongo
         return $this;
     }
 
-    function pre_save($op, &$obj)
+    function before_validate(&$obj)
     { 
-        if ($op == "create") {
-            $obj['ts'] = new MongoTimestamp();            
-        }
+        $obj['ts'] = new MongoTimestamp();            
     }
 
 
@@ -153,7 +151,7 @@ class PostModel extends ActiveMongo
      *
      *  @return void
      */
-    function on_save()
+    function after_create()
     {
         $this->updateAuthorInfo($this->author);
     }

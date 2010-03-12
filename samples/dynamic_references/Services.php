@@ -17,21 +17,17 @@ class Service extends ActiveMongo
         return 'services';
     }
 
-    final function pre_save($op, &$obj)
+    final function before_filter($obj)
     {
-        /* Little trick to ensure that each service
-         * has its own 'type' value.
-         */
-        if ($op == 'create') {
-            $obj['type'] = get_class($this);
-        } else {
-            $obj['$set']['type'] = get_class($this);
-        }
-        if (isset($GLOBALS['debug'])) {
-            var_dump(array($op => $obj));
-        }
+        $obj['type'] = get_class($this);
     }
 
+    function after_update($document)
+    {
+        if (isset($GLOBALS['debug'])) {
+            var_dump(array(get_class($this) => $document));
+        }
+    }
 
     function user_filter(&$value, $old_value)
     {

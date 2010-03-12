@@ -55,11 +55,9 @@ class MongoSession extends ActiveMongo
         $this->addIndex(array("ts" => 1));
     }
 
-    function pre_save($op, &$document)
+    function before_create(&$document)
     {
-        if ($op == 'create') {
-            $document['ts'] = new MongoDate();
-        }
+        $document['ts'] = new MongoDate();
     }
 
     final public static function init()

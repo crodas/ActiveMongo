@@ -50,12 +50,10 @@ class My_Logger extends MongoLogger
      *  Sample Hook which appends
      *  properties to the document.
      */
-    function pre_save($op, &$document)
+    function before_validate(&$document)
     {
-        if ($op == 'create') {
-            $document['user_ip'] = $_SERVER['REMOTE_ADDR'];
-            $document['request'] = array("POST" => $_POST, "GET" => $_GET);
-        }
+        $document['user_ip'] = $_SERVER['REMOTE_ADDR'];
+        $document['request'] = array("POST" => $_POST, "GET" => $_GET);
     }
 }
 

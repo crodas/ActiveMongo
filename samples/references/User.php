@@ -15,10 +15,10 @@ class User extends ActiveMongo
         $value = sha1($value);
     }
 
-    function pre_save($op, $document)
+    function after_update($document)
     {
         if (isset($GLOBALS['debug'])) {
-            var_dump(array($op => $document));
+            var_dump(array(get_class($this) => $document));
         }
     }
 
