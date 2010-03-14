@@ -1,6 +1,6 @@
 <?php
 
-require "../../ActiveMongo.php";
+require "../../lib/ActiveMongo.php";
 require "User.php";
 require "Services.php";
 

@@ -35,71 +35,106 @@
   +---------------------------------------------------------------------------------+
 */
 
-require "../../lib/ActiveMongo.php";
-require "Post.php";
-require "Author.php";
-
-ActiveMongo::connect("activemongo_blog");
-
-/* delete collections */
-PostModel::drop();
-AuthorModel::drop();
-
-/* This should be done just once */
-ActiveMongo::install();
-
-/* Create a new author
- * The property country is not defined
- * as an AuthorModel property, but it will
- * be saved. 
+/**
+ *  This class manages the Events and Filterings
+ *
  */
-$author = new AuthorModel;
-$author->username = "crodas";
-$author->name     = "Cesar Rodas";
-$author->country  = "PY"; 
-$author->save();
+class ActiveMongo_Events
+{
+    static private $_events;
 
-/* Add one blog post */
-$post = new PostModel;
-$post->uri = "/hello-world";
-$post->title  = "Hello World";
-$post->author = $author->getID();
-/* add one comment */
-$post->add_comment("testing", "root@foo.com", "testing comment");
-$post->save();
+    // addEvent($action, $callback) {{{
+    /**
+     *  addEvent
+     *
+     */
+    final static function addEvent($action, $callback)
+    {
+        if (!is_callable($callback)) {
+            throw new Exception("Invalid callback");
+        }
 
-/* add another comment */
-$post->add_comment("testing", "root@foo.com", "cool post");
-$post->save();
+        $class = get_called_class();
+        if ($class == __CLASS__ || $class == 'ActiveMongo') {
+            throw new Exception("{$class} can't have any event");
+        }
 
-for ($i=0; $i < 1000; $i++) {
-    /* Add another post */
-    $post = new PostModel;
-    $post->uri = "/".uniqid();
-    $post->title  = "Yet another post ($i)";
-    $post->author = $author->getID();
-    $post->save();
+        $events = & self::$_events[$class];
+        if (!isset($events[$action])) {
+            $events[$action] = array();
+        }
+        $events[$action][] = $callback;
+        return true;
+    }
+    // }}}
+
+    // triggerEvent(string $event, Array $params) {{{
+    final function triggerEvent($event, Array $params = array())
+    {
+        $events = & self::$_events[get_class($this)][$event];
+
+        if (!is_array($params)) {
+            return false;
+        }
+
+        if (count($events) > 0) {
+            foreach ($events as $fnc) {
+                call_user_func_array($fnc, $params);
+            }
+        }
+
+        /* Some natives events are allowed to be called 
+         * as methods, if they exists
+         */
+        switch ($event) {
+        case 'before_create':
+        case 'before_update':
+        case 'before_validate':
+        case 'before_delete':
+        case 'after_create':
+        case 'after_update':
+        case 'after_validate':
+        case 'after_delete':
+            $fnc = array($this, $event);
+            if (is_callable($fnc)) {
+                call_user_func_array($fnc, $params);
+            }
+            break;
+        }
+    }
+    // }}}
+
+     // void runFilter(string $key, mixed &$value, mixed $past_value) {{{
+    /**
+     *  *Internal Method* 
+     *
+     *  This method check if the current document property has
+     *  a filter method, if so, call it.
+     *  
+     *  If the filter returns false, throw an Exception.
+     *
+     *  @return void
+     */
+    protected function runFilter($key, &$value, $past_value)
+    {
+        $filter = array($this, "{$key}_filter");
+        if (is_callable($filter)) {
+            $filter = call_user_func_array($filter, array(&$value, $past_value));
+            if ($filter===false) {
+                throw new FilterException("{$key} filter failed");
+            }
+            $this->$key = $value;
+        }
+    }
+    // }}}
+
 }
 
-/* Clean up the current the resultset */
-/* same as $post = null; $post = new Post Model */
-/* but more efficient */
-$post->reset();
-$post->author = $author->getID();
-foreach ($post->find() as $bp) {
-    var_dump("Author: ".$bp->author_name);
-}
-
-$author->name = "cesar d. rodas";
-$author->save();
-
-var_dump("Author profile has been updated");
-
-/** 
- *  List our blog posts in the correct order
- *  (descending by Timestamp).
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
  */
-foreach ($post->listing_page() as $bp) {
-    var_dump(array("Author" => $bp->author_name, "Title"=>$bp->title));
-}
-

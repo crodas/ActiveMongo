@@ -35,8 +35,7 @@
   +---------------------------------------------------------------------------------+
 */
 
-
-require "../../ActiveMongo.php";
+require "../../lib/ActiveMongo.php";
 require "logger.php";
 
 /* Connect */

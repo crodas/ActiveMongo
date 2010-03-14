@@ -35,6 +35,9 @@
   +---------------------------------------------------------------------------------+
 */
 
+
+PostModel::addEvent('before_create', function($obj) { print "Attempt to create {$obj['title']}\n"; });
+
 class PostModel extends ActiveMongo
 {
     public $title;

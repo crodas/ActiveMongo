@@ -35,7 +35,7 @@
   +---------------------------------------------------------------------------------+
 */
 
-require "../../ActiveMongo.php";
+require "../../lib/ActiveMongo.php";
 require "sessions.php";
 
 

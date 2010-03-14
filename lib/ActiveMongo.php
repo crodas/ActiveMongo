@@ -35,6 +35,7 @@
   +---------------------------------------------------------------------------------+
 */
 
+require dirname(__FILE__)."/Events.php";
 
 // Class FilterException {{{
 /**
@@ -76,7 +77,7 @@ function get_object_vars_ex($obj)
  *  @version 1.0
  *
  */
-abstract class ActiveMongo implements Iterator 
+abstract class ActiveMongo extends ActiveMongo_Events implements Iterator 
 {
 
     // properties {{{
@@ -214,8 +215,6 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
 
-    // }}}
-
     // MongoConnection _getConnection() {{{
     /**
      *  Get Connection
@@ -256,6 +255,8 @@ abstract class ActiveMongo implements Iterator
         }
         return self::$_collections[$colName];
     }
+    // }}}
+
     // }}}
 
     // GET DOCUMENT TO SAVE OR UPDATE {{{
@@ -349,7 +350,7 @@ abstract class ActiveMongo implements Iterator
 
         $this->findReferences($object);
 
-        $this->before_validate($object);
+        $this->triggerEvent('before_validate', array(&$object));
 
         foreach ($object as $key => $value) {
             if (!$value) {
@@ -369,7 +370,7 @@ abstract class ActiveMongo implements Iterator
                          *  We're lucky, the field wasn't 
                          *  an array previously.
                          */
-                        $this->_call_filter($key, $value, $current[$key]);
+                        $this->runFilter($key, $value, $current[$key]);
                         $document['$set'][$key] = $value;
                         continue;
                     }
@@ -383,7 +384,7 @@ abstract class ActiveMongo implements Iterator
                      *  has been modified.
                      */
                     $past_value = isset($current[$key]) ? $current[$key] : null;
-                    $this->_call_filter($key, $value, $past_value);
+                    $this->runFilter($key, $value, $past_value);
                     $document['$set'][$key] = $value;
                 }
             } else {
@@ -391,7 +392,7 @@ abstract class ActiveMongo implements Iterator
                  *  It is a document insertation, so we 
                  *  create the document.
                  */
-                $this->_call_filter($key, $value, null);
+                $this->runFilter($key, $value, null);
                 $document[$key] = $value;
             }
         }
@@ -410,33 +411,9 @@ abstract class ActiveMongo implements Iterator
             return array();
         }
 
-        $this->after_validate($document);
+        $this->triggerEvent('after_validate', array(&$document));
 
         return $document;
-    }
-    // }}}
-
-    // void _call_filter(string $key, mixed &$value, mixed $past_value) {{{
-    /**
-     *  *Internal Method* 
-     *
-     *  This method check if the current document property has
-     *  a filter method, if so, call it.
-     *  
-     *  If the filter returns false, throw an Exception.
-     *
-     *  @return void
-     */
-    private function _call_filter($key, &$value, $past_value)
-    {
-        $filter = array($this, "{$key}_filter");
-        if (is_callable($filter)) {
-            $filter = call_user_func_array($filter, array(&$value, $past_value));
-            if ($filter===false) {
-                throw new FilterException("{$key} filter failed");
-            }
-            $this->$key = $value;
-        }
     }
     // }}}
 
@@ -551,11 +528,7 @@ abstract class ActiveMongo implements Iterator
         }
 
          /* PRE-save hook */
-        if ($update) {
-            $this->before_update($obj);
-        } else {
-            $this->before_create($obj);
-        }
+        $this->triggerEvent('before_'.($update ? 'update' : 'create'), array(&$obj));
 
         if ($update) {
             $conn->update(array('_id' => $this->_id), $obj);
@@ -565,13 +538,13 @@ abstract class ActiveMongo implements Iterator
                 }
                 $this->_current[$key] = $value;
             }
-            $this->after_update($obj);
         } else {
             $conn->insert($obj, $async);
             $this->_id      = $obj['_id'];
             $this->_current = $obj; 
-            $this->after_create($obj);
         }
+
+        $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($obj));
     }
     // }}}
 
@@ -584,9 +557,10 @@ abstract class ActiveMongo implements Iterator
     final function delete()
     {
         if ($this->valid()) {
-            $this->before_destroy();
-            $result = $this->_getCollection()->remove(array('_id' => $this->_id));
-            $this->after_destroy();
+            $document = array('_id' => $this->_id);
+            $this->triggerEvent('before_delete', array($document));
+            $result = $this->_getCollection()->remove($document);
+            $this->triggerEvent('after_delete', array($document));
             return $result;
         }
         return false;
@@ -623,6 +597,76 @@ abstract class ActiveMongo implements Iterator
             return $this->_cursor->count();
         }
         return 0;
+    }
+    // }}}
+
+    // void setup() {{{
+    /**
+     *  This method should contain all the indexes, and shard keys
+     *  needed by the current collection. This try to make
+     *  installation on development environments easier.
+     */
+    function setup()
+    {
+    }
+    // }}}
+
+    // bool addIndex(array $columns, array $options) {{{
+    /**
+     *  addIndex
+     *  
+     *  Create an Index in the current collection.
+     *
+     *  @param array $columns L ist of columns
+     *  @param array $options Options
+     *
+     *  @return bool
+     */
+    final function addIndex($columns, $options=array())
+    {
+        $default_options = array(
+            'background' => 1,
+        );
+
+       foreach ($default_options as $option => $value) {
+            if (!isset($options[$option])) {
+                $options[$option] = $value;
+            }
+        }
+
+        $collection = $this->_getCollection();
+
+        return $collection->ensureIndex($columns, $options);
+    }
+    // }}}
+
+    // string __toString() {{{
+    /**
+     *  To String
+     *
+     *  If this object is treated as a string,
+     *  it would return its ID.
+     *
+     *  @return string
+     */
+    final function __toString()
+    {
+        return (string)$this->getID();
+    }
+    // }}}
+
+    // array sendCmd(array $cmd) {{{
+    /**
+     *  This method sends a command to the current
+     *  database.
+     *
+     *  @param array $cmd Current command
+     *
+     *  @return array
+     */
+    final protected function sendCmd($cmd)
+    {
+        return $this->_getConnection()->command($cmd);
     }
     // }}}
 
@@ -1079,134 +1123,6 @@ abstract class ActiveMongo implements Iterator
     // }}}
 
     // }}}
-
-    // HOOKS {{{
-
-    //  Saving {{{
-    protected function before_create(Array &$document)
-    {
-    }
-
-    protected function before_update(Array &$document)
-    {
-    }
-
-    protected function after_create()
-    {
-    }
-
-    protected function after_update()
-    {
-    }
-    // }}}
-
-    // Destroing {{{
-    function before_destroy()
-    {
-    }
-
-    function after_destroy()
-    {
-    }
-    // }}}
-
-    // Validations {{{
-    function before_validate(Array &$document)
-    {
-    }
-
-    function after_validate(Array &$document)
-    {
-    }
-    // }}}
-
-    // void on_iterate() {{{
-    /**
-     *    On Iterate Hook
-     *
-     *    This method is fired right after a new document is loaded 
-     *    from the recorset, it could be useful to load references to other 
-     *    documents.
-     *
-     *    @return void
-     */
-    protected function on_iterate()
-    {
-    }
-    // }}}
-
-    //}}}
-
-    // void setup() {{{
-    /**
-     *  This method should contain all the indexes, and shard keys
-     *  needed by the current collection. This try to make
-     *  installation on development environments easier.
-     */
-    function setup()
-    {
-    }
-    // }}}
-
-    // bool addIndex(array $columns, array $options) {{{
-    /**
-     *  addIndex
-     *  
-     *  Create an Index in the current collection.
-     *
-     *  @param array $columns L ist of columns
-     *  @param array $options Options
-     *
-     *  @return bool
-     */
-    final function addIndex($columns, $options=array())
-    {
-        $default_options = array(
-            'background' => 1,
-        );
-
-       foreach ($default_options as $option => $value) {
-            if (!isset($options[$option])) {
-                $options[$option] = $value;
-            }
-        }
-
-        $collection = $this->_getCollection();
-
-        return $collection->ensureIndex($columns, $options);
-    }
-    // }}}
-
-    // string __toString() {{{
-    /**
-     *  To String
-     *
-     *  If this object is treated as a string,
-     *  it would return its ID.
-     *
-     *  @return string
-     */
-    final function __toString()
-    {
-        return (string)$this->getID();
-    }
-    // }}}
-
-    // array sendCmd(array $cmd) {{{
-    /**
-     *  This method sends a command to the current
-     *  database.
-     *
-     *  @param array $cmd Current command
-     *
-     *  @return array
-     */
-    final protected function sendCmd($cmd)
-    {
-        return $this->_getConnection()->command($cmd);
-    }
-    // }}}
-
 }
 
 /*
