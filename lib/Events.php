@@ -41,7 +41,8 @@
  */
 class ActiveMongo_Events
 {
-    static private $_events;
+    static private $_events = array();
+    static private $_super_events = array();
 
     // addEvent($action, $callback) {{{
     /**
@@ -56,10 +57,10 @@ class ActiveMongo_Events
 
         $class = get_called_class();
         if ($class == __CLASS__ || $class == 'ActiveMongo') {
-            throw new Exception("{$class} can't have any event");
+            $events = & self::$_super_events;
+        } else {
+            $events = & self::$_events[$class];
         }
-
-        $events = & self::$_events[$class];
         if (!isset($events[$action])) {
             $events[$action] = array();
         }
@@ -68,18 +69,25 @@ class ActiveMongo_Events
     }
     // }}}
 
-    // triggerEvent(string $event, Array $params) {{{
-    final function triggerEvent($event, Array $params = array())
+    // triggerEvent(string $event, Array $events_params) {{{
+    final function triggerEvent($event, Array $events_params = array())
     {
-        $events = & self::$_events[get_class($this)][$event];
+        $events  = & self::$_events[get_class($this)][$event];
+        $sevents = & self::$_super_events[$event];
 
-        if (!is_array($params)) {
+        if (!is_array($events_params)) {
             return false;
         }
 
-        if (count($events) > 0) {
-            foreach ($events as $fnc) {
-                call_user_func_array($fnc, $params);
+        /* Super-Events handler receives the ActiveMongo class name as first param */
+        $sevents_params = array_merge(array(get_class($this)), $events_params);
+
+        foreach (array('events', 'sevents') as $event_type) {
+            if (count($$event_type) > 0) {
+                $params = "{$event_type}_params";
+                foreach ($$event_type as $fnc) {
+                    call_user_func_array($fnc, $$params);
+                }
             }
         }
 
@@ -95,9 +103,10 @@ class ActiveMongo_Events
         case 'after_update':
         case 'after_validate':
         case 'after_delete':
-            $fnc = array($this, $event);
+            $fnc    = array($this, $event);
+            $params = "events_params";
             if (is_callable($fnc)) {
-                call_user_func_array($fnc, $params);
+                call_user_func_array($fnc, $$params);
             }
             break;
         }
