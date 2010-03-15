@@ -36,10 +36,18 @@
 */
 
 
-PostModel::addEvent('before_create', function($obj) { print "Attempt to create {$obj['title']}\n"; });
-
 class PostModel extends ActiveMongo
 {
+    static $validates_presence_of = array(
+        'title',
+        'uri',
+        'author',
+    );
+
+    static $validates_length_of = array(
+        array('title', 'min' => 5, 'max' => 30),
+    );
+
     public $title;
     public $uri;
     public $author;

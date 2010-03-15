@@ -35,71 +35,69 @@
   +---------------------------------------------------------------------------------+
 */
 
-require "../../lib/ActiveMongo.php";
-require "Post.php";
-require "Author.php";
+// Valid Presence Of {{{
+ActiveMongo_Events::addEvent("before_validate_creation", function ($class, $obj) {
+    if (isset($class::$validates_presence_of)) {
+        foreach ((Array)$class::$validates_presence_of as $property) {
+            if (!isset($obj[$property])) {
+                throw new FilterException("Missing required property {$property}"); 
+            }
+        }
+    }
+});
 
-ActiveMongo::connect("activemongo_blog");
+ActiveMongo_Events::addEvent("before_validate_update", function ($class, $obj) {
+    if (isset($class::$validates_presence_of)) {
+        foreach ((Array)$class::$validates_presence_of as $property) {
+            if (isset($obj['$unset'][$property])) {
+                throw new FilterException("Cannot delete required property {$property}"); 
+            }
+        }
+    }
+});
+// }}}
 
-/* delete collections */
-PostModel::drop();
-AuthorModel::drop();
+// Valid Size Of / Valid Length Of {{{ 
+ActiveMongo_Events::addEvent("before_validate", function ($class, $obj) {
+    $validates = array();
 
-/* This should be done just once */
-ActiveMongo::install();
+    if (isset($class::$validates_size_of)) {
+        $validates = $class::$validates_size_of;
+    } else if (isset($class::$validates_length_of)) {
+        $validates = $class::$validates_length_of;
+    }
 
-/* Create a new author
- * The property country is not defined
- * as an AuthorModel property, but it will
- * be saved. 
+    foreach ($validates as $property) {
+        $name = $property[0];
+
+        if (isset($obj[$name])) {
+            $prop = $obj[$name];
+        }
+
+        if (isset($obj['$set'][$name])) {
+            $prop = $obj['$set'][$name];
+        }
+
+        if (isset($prop)) {
+            if (isset($property['min']) && strlen($prop) < $property['min']) {
+                throw new FilterException("{$name} length is too short");
+            }
+            if (isset($property['is']) && strlen($prop) != $property['is']) {
+                throw new FilterException("{$name} length is different than expected");
+            }
+            if (isset($property['max']) && strlen($prop) > $property['max']) {
+                throw new FilterException("{$name} length is too large");
+            }
+        }
+    }
+});
+// }}}
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
  */
-$author = new AuthorModel;
-$author->username = "crodas";
-$author->name     = "Cesar Rodas";
-$author->country  = "PY"; 
-$author->save();
-
-/* Add one blog post */
-$post = new PostModel;
-$post->uri = "/hello-world";
-$post->title  = "Hello World";
-$post->author = $author->getID();
-/* add one comment */
-$post->add_comment("testing", "root@foo.com", "testing comment");
-$post->save();
-
-/* add another comment */
-$post->add_comment("testing", "root@foo.com", "cool post");
-$post->save();
-
-for ($i=0; $i < 1000; $i++) {
-    /* Add another post */
-    $post->reset(); /* reet the post object */
-    $post->uri = "/".uniqid();
-    $post->title  = "Yet another post ($i)";
-    $post->author = $author->getID();
-    $post->save();
-}
-
-/* Clean up the current the resultset */
-/* same as $post = null; $post = new Post Model */
-/* but more efficient */
-$post->reset();
-$post->author = $author->getID();
-foreach ($post->find() as $bp) {
-    var_dump("Author: ".$bp->author_name);
-}
-
-$author->name = "cesar d. rodas";
-$author->save();
-
-var_dump("Author profile has been updated");
-
-/** 
- *  List our blog posts in the correct order
- *  (descending by Timestamp).
- */
-foreach ($post->listing_page() as $bp) {
-    var_dump(array("Author" => $bp->author_name, "Title"=>$bp->title));
-}
-

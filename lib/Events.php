@@ -35,6 +35,8 @@
   +---------------------------------------------------------------------------------+
 */
 
+require_once dirname(__FILE__)."/Validators.php";
+
 /**
  *  This class manages the Events and Filterings
  *

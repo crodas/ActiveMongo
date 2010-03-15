@@ -350,6 +350,7 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
 
         $this->findReferences($object);
 
+        $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object));
         $this->triggerEvent('before_validate', array(&$object));
 
         foreach ($object as $key => $value) {
@@ -411,6 +412,7 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
             return array();
         }
 
+        $this->triggerEvent('after_validate_'.($update?'update':'creation'), array(&$object));
         $this->triggerEvent('after_validate', array(&$document));
 
         return $document;
@@ -681,7 +683,6 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
      */
     final function reset()
     {
-        $this->_count = 0;
         $this->_cursor = null;
         $this->setResult(array());
     }
