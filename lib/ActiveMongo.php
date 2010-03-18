@@ -35,8 +35,6 @@
   +---------------------------------------------------------------------------------+
 */
 
-require dirname(__FILE__)."/Events.php";
-
 // Class FilterException {{{
 /**
  *  FilterException
@@ -45,7 +43,7 @@ require dirname(__FILE__)."/Events.php";
  *  fails when save() is called.
  *
  */
-final class FilterException extends Exception 
+class ActiveMongo_FilterException extends Exception 
 {
 }
 // }}}
@@ -77,7 +75,7 @@ function get_object_vars_ex($obj)
  *  @version 1.0
  *
  */
-abstract class ActiveMongo extends ActiveMongo_Events implements Iterator 
+abstract class ActiveMongo implements Iterator 
 {
 
     // properties {{{
@@ -105,6 +103,18 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
      *  @type string
      */
     private static $_db;
+    /**
+     *  List of events handlers
+     *  
+     *  @type array
+     */
+    static private $_events = array();
+    /**
+     *  List of global events handlers
+     *
+     *  @type array
+     */
+    static private $_super_events = array();
     /**
      *  Host name
      *
@@ -416,6 +426,103 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
         $this->triggerEvent('after_validate', array(&$document));
 
         return $document;
+    }
+    // }}}
+
+    // }}}
+
+    // EVENT HANDLERS {{{
+
+    // addEvent($action, $callback) {{{
+    /**
+     *  addEvent
+     *
+     */
+    final static function addEvent($action, $callback)
+    {
+        if (!is_callable($callback)) {
+            throw new Exception("Invalid callback");
+        }
+
+        $class = get_called_class();
+        if ($class == __CLASS__) {
+            $events = & self::$_super_events;
+        } else {
+            $events = & self::$_events[$class];
+        }
+        if (!isset($events[$action])) {
+            $events[$action] = array();
+        }
+        $events[$action][] = $callback;
+        return true;
+    }
+    // }}}
+
+    // triggerEvent(string $event, Array $events_params) {{{
+    final function triggerEvent($event, Array $events_params = array())
+    {
+        $events  = & self::$_events[get_class($this)][$event];
+        $sevents = & self::$_super_events[$event];
+
+        if (!is_array($events_params)) {
+            return false;
+        }
+
+        /* Super-Events handler receives the ActiveMongo class name as first param */
+        $sevents_params = array_merge(array(get_class($this)), $events_params);
+
+        foreach (array('events', 'sevents') as $event_type) {
+            if (count($$event_type) > 0) {
+                $params = "{$event_type}_params";
+                foreach ($$event_type as $fnc) {
+                    call_user_func_array($fnc, $$params);
+                }
+            }
+        }
+
+        /* Some natives events are allowed to be called 
+         * as methods, if they exists
+         */
+        switch ($event) {
+        case 'before_create':
+        case 'before_update':
+        case 'before_validate':
+        case 'before_delete':
+        case 'after_create':
+        case 'after_update':
+        case 'after_validate':
+        case 'after_delete':
+            $fnc    = array($this, $event);
+            $params = "events_params";
+            if (is_callable($fnc)) {
+                call_user_func_array($fnc, $$params);
+            }
+            break;
+        }
+    }
+    // }}}
+
+     // void runFilter(string $key, mixed &$value, mixed $past_value) {{{
+    /**
+     *  *Internal Method* 
+     *
+     *  This method check if the current document property has
+     *  a filter method, if so, call it.
+     *  
+     *  If the filter returns false, throw an Exception.
+     *
+     *  @return void
+     */
+    protected function runFilter($key, &$value, $past_value)
+    {
+        $filter = array($this, "{$key}_filter");
+        if (is_callable($filter)) {
+            $filter = call_user_func_array($filter, array(&$value, $past_value));
+            if ($filter===false) {
+                throw new ActiveMongo_FilterException("{$key} filter failed");
+            }
+            $this->$key = $value;
+        }
     }
     // }}}
 
@@ -1125,6 +1232,8 @@ abstract class ActiveMongo extends ActiveMongo_Events implements Iterator
 
     // }}}
 }
+
+require_once dirname(__FILE__)."/Validators.php";
 
 /*
  * Local variables:

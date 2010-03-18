@@ -10,7 +10,7 @@ class User extends ActiveMongo
     function password_filter(&$value, $old_value)
     {
         if (strlen($value) < 5) {
-            throw new FilterException("Password is too short");
+            throw new ActiveMongo_FilterException("Password is too short");
         }
         $value = sha1($value);
     }
@@ -25,15 +25,15 @@ class User extends ActiveMongo
     function username_filter($value, $old_value)
     {
         if ($old_value!=null && $value != $old_value) {
-            throw new FilterException("The username can't be changed");
+            throw new ActiveMongo_FilterException("The username can't be changed");
         }
 
         if (!preg_match("/[a-z][a-z0-9\-\_]+/", $value)) {
-            throw new FilterException("The username is not valid");
+            throw new ActiveMongo_FilterException("The username is not valid");
         }
 
         if (strlen($value) < 5) {
-            throw new FilterException("Username too short");
+            throw new ActiveMongo_FilterException("Username too short");
         }
         return true;
     }

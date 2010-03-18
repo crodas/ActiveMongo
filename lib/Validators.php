@@ -36,21 +36,21 @@
 */
 
 // Valid Presence Of {{{
-ActiveMongo_Events::addEvent("before_validate_creation", function ($class, $obj) {
+ActiveMongo::addEvent("before_validate_creation", function ($class, $obj) {
     if (isset($class::$validates_presence_of)) {
         foreach ((Array)$class::$validates_presence_of as $property) {
             if (!isset($obj[$property])) {
-                throw new FilterException("Missing required property {$property}"); 
+                throw new ActiveMongo_FilterException("Missing required property {$property}"); 
             }
         }
     }
 });
 
-ActiveMongo_Events::addEvent("before_validate_update", function ($class, $obj) {
+ActiveMongo::addEvent("before_validate_update", function ($class, $obj) {
     if (isset($class::$validates_presence_of)) {
         foreach ((Array)$class::$validates_presence_of as $property) {
             if (isset($obj['$unset'][$property])) {
-                throw new FilterException("Cannot delete required property {$property}"); 
+                throw new ActiveMongo_FilterException("Cannot delete required property {$property}"); 
             }
         }
     }
@@ -58,7 +58,7 @@ ActiveMongo_Events::addEvent("before_validate_update", function ($class, $obj) {
 // }}}
 
 // Valid Size Of / Valid Length Of {{{ 
-ActiveMongo_Events::addEvent("before_validate", function ($class, $obj) {
+ActiveMongo::addEvent("before_validate", function ($class, $obj) {
     $validates = array();
 
     if (isset($class::$validates_size_of)) {
@@ -80,13 +80,13 @@ ActiveMongo_Events::addEvent("before_validate", function ($class, $obj) {
 
         if (isset($prop)) {
             if (isset($property['min']) && strlen($prop) < $property['min']) {
-                throw new FilterException("{$name} length is too short");
+                throw new ActiveMongo_FilterException("{$name} length is too short");
             }
             if (isset($property['is']) && strlen($prop) != $property['is']) {
-                throw new FilterException("{$name} length is different than expected");
+                throw new ActiveMongo_FilterException("{$name} length is different than expected");
             }
             if (isset($property['max']) && strlen($prop) > $property['max']) {
-                throw new FilterException("{$name} length is too large");
+                throw new ActiveMongo_FilterException("{$name} length is too large");
             }
         }
     }
