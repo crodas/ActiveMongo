@@ -35,63 +35,91 @@
   +---------------------------------------------------------------------------------+
 */
 
-// Valid Presence Of {{{
-ActiveMongo::addEvent("before_validate_creation", function ($class, $obj) {
-    if (isset($class::$validates_presence_of)) {
-        foreach ((Array)$class::$validates_presence_of as $property) {
-            if (!isset($obj[$property])) {
-                throw new ActiveMongo_FilterException("Missing required property {$property}"); 
+/**
+ *  Default validators
+ *
+ *
+ */
+class ActiveMongo_Validators
+{
+
+    final private static function _hook($action, $method)
+    {
+        ActiveMongo::addEvent($action, array(__CLASS__, $method));
+    }
+
+    final public static function init() 
+    {
+        self::_hook("before_validate_creation", "presence_of_creation");
+        self::_hook("before_validate_update", "presence_of_update");
+        self::_hook("before_validate", "length_of");
+    }
+
+    // validates_length_of {{{
+    final static function length_of($class, $obj)
+    {
+        $validates = array();
+
+        if (isset($class::$validates_size_of)) {
+            $validates = $class::$validates_size_of;
+        } else if (isset($class::$validates_length_of)) {
+            $validates = $class::$validates_length_of;
+        }
+
+        foreach ($validates as $property) {
+            $name = $property[0];
+
+            if (isset($obj[$name])) {
+                $prop = $obj[$name];
+            }
+
+            if (isset($obj['$set'][$name])) {
+                $prop = $obj['$set'][$name];
+            }
+
+            if (isset($prop)) {
+                if (isset($property['min']) && strlen($prop) < $property['min']) {
+                    throw new ActiveMongo_FilterException("{$name} length is too short");
+                }
+                if (isset($property['is']) && strlen($prop) != $property['is']) {
+                    throw new ActiveMongo_FilterException("{$name} length is different than expected");
+                }
+                if (isset($property['max']) && strlen($prop) > $property['max']) {
+                    throw new ActiveMongo_FilterException("{$name} length is too large");
+                }
             }
         }
     }
-});
+    // }}}
 
-ActiveMongo::addEvent("before_validate_update", function ($class, $obj) {
-    if (isset($class::$validates_presence_of)) {
-        foreach ((Array)$class::$validates_presence_of as $property) {
-            if (isset($obj['$unset'][$property])) {
-                throw new ActiveMongo_FilterException("Cannot delete required property {$property}"); 
+    // validates_presence_of {{{
+    final static function presence_of_creation($class, $obj)
+    {
+        if (isset($class::$validates_presence_of)) {
+            foreach ((Array)$class::$validates_presence_of as $property) {
+                if (!isset($obj[$property])) {
+                    throw new ActiveMongo_FilterException("Missing required property {$property}"); 
+                }
             }
         }
     }
-});
-// }}}
 
-// Valid Size Of / Valid Length Of {{{ 
-ActiveMongo::addEvent("before_validate", function ($class, $obj) {
-    $validates = array();
-
-    if (isset($class::$validates_size_of)) {
-        $validates = $class::$validates_size_of;
-    } else if (isset($class::$validates_length_of)) {
-        $validates = $class::$validates_length_of;
-    }
-
-    foreach ($validates as $property) {
-        $name = $property[0];
-
-        if (isset($obj[$name])) {
-            $prop = $obj[$name];
-        }
-
-        if (isset($obj['$set'][$name])) {
-            $prop = $obj['$set'][$name];
-        }
-
-        if (isset($prop)) {
-            if (isset($property['min']) && strlen($prop) < $property['min']) {
-                throw new ActiveMongo_FilterException("{$name} length is too short");
-            }
-            if (isset($property['is']) && strlen($prop) != $property['is']) {
-                throw new ActiveMongo_FilterException("{$name} length is different than expected");
-            }
-            if (isset($property['max']) && strlen($prop) > $property['max']) {
-                throw new ActiveMongo_FilterException("{$name} length is too large");
+    final static function presence_of_update($class, $obj)
+    {
+        if (isset($class::$validates_presence_of)) {
+            foreach ((Array)$class::$validates_presence_of as $property) {
+                if (isset($obj['$unset'][$property])) {
+                    throw new ActiveMongo_FilterException("Cannot delete required property {$property}"); 
+                }
             }
         }
     }
-});
-// }}}
+    // }}}
+
+}
+
+// Register validators
+ActiveMongo_Validators::init();
 
 /*
  * Local variables:
