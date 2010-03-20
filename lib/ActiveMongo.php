@@ -1250,8 +1250,8 @@ abstract class ActiveMongo implements Iterator
     final function where($column_str, $value)
     {
         $column = explode(" ", $column_str);
-        if (count($column) > 2) {
-            throw new ActiveMongo_Exception("Failed at parsing '{$column_str}'");
+        if (count($column) != 1 || count($column) != 2) {
+            throw new ActiveMongo_Exception("Failed while parsing '{$column_str}'");
         } else if (count($column) == 2) {
             switch ($column[1]) {
             case '>':
@@ -1274,6 +1274,13 @@ abstract class ActiveMongo implements Iterator
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
             $value = array($op => $value);
+        }
+
+        if (is_array($value)) {
+            if (count($column) == 2) {
+                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+            }
+            $value = array('$in' => $value);
         }
         $this->_query['query'][$column[0]] =  $value;
     }
