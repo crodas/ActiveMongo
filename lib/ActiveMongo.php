@@ -1250,7 +1250,7 @@ abstract class ActiveMongo implements Iterator
     final function where($column_str, $value)
     {
         $column = explode(" ", $column_str);
-        if (count($column) != 1 || count($column) != 2) {
+        if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$column_str}'");
         } else if (count($column) == 2) {
             switch ($column[1]) {
