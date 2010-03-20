@@ -36,6 +36,9 @@
 */
 
 // Class FilterException {{{
+class  ActiveMongo_Exception extends Exception
+{
+}
 /**
  *  FilterException
  *
@@ -43,7 +46,7 @@
  *  fails when save() is called.
  *
  */
-class ActiveMongo_FilterException extends Exception 
+class ActiveMongo_FilterException extends ActiveMongo_Exception 
 {
 }
 // }}}
@@ -133,6 +136,7 @@ abstract class ActiveMongo implements Iterator
      *  @type MongoCursor
      */
     private $_cursor  = null;
+    private $_query   = null;
     /**
      *  Current document ID
      *    
@@ -791,6 +795,7 @@ abstract class ActiveMongo implements Iterator
     final function reset()
     {
         $this->_cursor = null;
+        $this->_query  = null;
         $this->setResult(array());
     }
     // }}}
@@ -844,6 +849,14 @@ abstract class ActiveMongo implements Iterator
      */
     final function rewind()
     {
+        if (!$this->_cursor InstanceOf MongoCursor) {
+            if (count((array)$this->_query) == 0) {
+                throw new ActiveMongo_Exception("Imposible to iterate with no resultset");
+            }
+            $col    = $this->_getCollection();
+            $cursor = $col->find($this->_query['query']);
+            $this->setCursor($cursor);
+        }
         return $this->_cursor->rewind();
     }
     // }}}
@@ -1231,6 +1244,42 @@ abstract class ActiveMongo implements Iterator
     // }}}
 
     // }}}
+
+    // Fancy (and silly) query abstraction {{{
+    
+    final function where($column_str, $value)
+    {
+        $column = explode(" ", $column_str);
+        if (count($column) > 2) {
+            throw new ActiveMongo_Exception("Failed at parsing '{$column_str}'");
+        } else if (count($column) == 2) {
+            switch ($column[1]) {
+            case '>':
+                $op = '$gt';
+                break;
+            case '>=':
+                $op = '$gte';
+            case '<':
+                $op = '$lt';
+                break;
+            case '<=':
+                $op = '$lte';
+                break;
+            case '==':
+                $op = '$eq';
+            case '!=':
+                $op = '$ne';
+                break;
+            default:
+                throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
+            }
+            $value = array($op => $value);
+        }
+        $this->_query['query'][$column[0]] =  $value;
+    }
+
+    // }}}
+
 }
 
 require_once dirname(__FILE__)."/Validators.php";
