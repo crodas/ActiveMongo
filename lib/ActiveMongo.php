@@ -1253,6 +1253,9 @@ abstract class ActiveMongo implements Iterator
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$column_str}'");
         } else if (count($column) == 2) {
+            if (is_array($value)) {
+                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+            }
             switch ($column[1]) {
             case '>':
                 $op = '$gt';
@@ -1274,14 +1277,10 @@ abstract class ActiveMongo implements Iterator
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
             $value = array($op => $value);
-        }
-
-        if (is_array($value)) {
-            if (count($column) == 2) {
-                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
-            }
+        } else if (is_array($value)) {
             $value = array('$in' => $value);
         }
+
         $this->_query['query'][$column[0]] =  $value;
     }
 
