@@ -136,7 +136,15 @@ abstract class ActiveMongo implements Iterator
      *  @type MongoCursor
      */
     private $_cursor  = null;
+
+    /* {{{ Silly but useful query abstraction  */
     private $_query   = null;
+    private $_sort    = null;
+    private $_limit   = 0;
+    private $_skip    = 0;
+    private $_columns = null;
+    /* }}} */
+
     /**
      *  Current document ID
      *    
@@ -794,8 +802,12 @@ abstract class ActiveMongo implements Iterator
      */
     final function reset()
     {
-        $this->_cursor = null;
-        $this->_query  = null;
+        $this->_columns = null;
+        $this->_cursor  = null;
+        $this->_query   = null;
+        $this->_sort    = null;
+        $this->_limit   = 0;
+        $this->_skip    = 0;
         $this->setResult(array());
     }
     // }}}
@@ -850,12 +862,7 @@ abstract class ActiveMongo implements Iterator
     final function rewind()
     {
         if (!$this->_cursor InstanceOf MongoCursor) {
-            if (count((array)$this->_query) == 0) {
-                throw new ActiveMongo_Exception("Imposible to iterate with no resultset");
-            }
-            $col    = $this->_getCollection();
-            $cursor = $col->find($this->_query['query']);
-            $this->setCursor($cursor);
+            $this->doQuery();
         }
         return $this->_cursor->rewind();
     }
@@ -1246,7 +1253,50 @@ abstract class ActiveMongo implements Iterator
     // }}}
 
     // Fancy (and silly) query abstraction {{{
-    
+
+    final protected function doQuery()
+    {
+        $col    = $this->_getCollection();
+        if (count($this->_columns) > 0) {
+            $cursor = $col->find((array)$this->_query['query'], $this->_columns);
+        } else {
+            $cursor = $col->find((array)$this->_query['query']);
+        }
+        if (is_array($this->_sort)) {
+            $cursor->sort($this->_sort);
+        }
+        if ($this->_limit > 0) {
+            $cursor->limit($this->_limit);
+        }
+        if ($this->_skip > 0) {
+            $this->skip($this->_skip);
+        }
+        /* Our cursor must be sent to ActiveMongo */
+        $this->setCursor($cursor);
+    }
+
+    final function columns($columns)
+    {
+        if (!is_array($columns) && !is_string($columns)) {
+            return false;
+        }
+
+        if (is_string($columns)) {
+            $columns = explode(",", $columns);
+        }
+
+        foreach ($columns as $id => $name) {
+            $columns[trim($name)] = 1;
+            unset($columns[$id]);
+        }
+
+        $this->_columns = $columns;
+    }
+
+    /**
+     *  Where abstraction
+     *
+     */
     final function where($column_str, $value)
     {
         $column = explode(" ", $column_str);
@@ -1282,6 +1332,44 @@ abstract class ActiveMongo implements Iterator
         }
 
         $this->_query['query'][$column[0]] =  $value;
+    }
+
+    final function sort($sort_str)
+    {
+        $this->_sort = array();
+        foreach ((array)explode(",", $sort_str) as $sort_part_str) {
+            $sort_part = explode(" ", $sort_part_str, 2);
+            switch(count($sort_part)) {
+            case 1:
+                $sort_part[1] = 'ASC';
+                break;
+            case 2:
+                break;
+            default:
+                throw new ActiveMongo_Exception("Don't know how to parse {$sort_part_str}");
+            }
+
+            switch (strtoupper($sort_part[1])) {
+            case 'ASC':
+                $sort_part[1] = 1;
+                break;
+            case 'DESC':
+                $sort_part[1] = -1;
+                break;
+            default:
+                throw new ActiveMongo_Exception("Invalid sorting direction {$sort_part[1]}");
+            }
+            $this->_sort[ $sort_part[0] ] = $sort_part[1];
+        }
+    }
+
+    final function limit($limit=0, $skip=0)
+    {
+        if ($limit < 0 || $skip < 0) {
+            return false;
+        }
+        $this->_limit = $limit;
+        $this->_skip  = $skip;
     }
 
     // }}}

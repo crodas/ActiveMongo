@@ -85,8 +85,8 @@ for ($i=0; $i < 1000; $i++) {
 /* same as $post = null; $post = new Post Model */
 /* but more efficient */
 $post->reset();
-$post->author = $author->getID();
-foreach ($post->find() as $bp) {
+$post->where('author',  $author->getID());
+foreach ($post as $bp) {
     var_dump("Author: ".$bp->author_name);
 }
 
@@ -99,7 +99,11 @@ var_dump("Author profile has been updated");
  *  List our blog posts in the correct order
  *  (descending by Timestamp).
  */
-foreach ($post->listing_page() as $bp) {
+$post->reset();
+$post->columns("title, uri, author_name, author_username, ts");
+$post->sort("ts DESC");
+$post->limit(PostModel::LIMIT_PER_PAGE);
+foreach ($post as $bp) {
     var_dump(array("Author" => $bp->author_name, "Title"=>$bp->title));
 }
 

@@ -66,41 +66,6 @@ class PostModel extends ActiveMongo
         return 'post';
     }
 
-    /**
-     *  Display the blog posts entries in the correct
-     *  order, getting only the needed columns, and 
-     *  adding pagination.
-     *
-     *  @return PostModel This document
-     */
-    function listing_page()
-    {
-        /* Get collection */
-        $collection = $this->_getCollection();
-
-        /* Deal with MongoDB directly  */
-        $columns = array(
-            'title' => 1,
-            'uri' => 1,
-            'author_name' => 1,
-            'author_username' => 1,
-            'ts' => 1,
-        );
-        $cursor  = $collection->find(array(), $columns);
-        $cursor->sort(array("ts" => -1))->limit(self::LIMIT_PER_PAGE);
-
-        /* Pagination */
-        if (isset($_GET['page']) && is_numeric($_GET['page']) && $_GET['page'] > 0) {
-            $skip = (int)$_GET['page'] * self::LIMIT_PER_PAGE;
-            $cursor->skip($skip);
-        }
-
-        /* Pass our results to ActiveMongo */
-        $this->setCursor($cursor);
-
-        return $this;
-    }
-
     function before_validate(&$obj)
     { 
         $obj['ts'] = new MongoTimestamp();            
