@@ -897,13 +897,13 @@ abstract class ActiveMongo implements Iterator
             'class' => get_class($this),
         );
 
-        if ($dynamic) {
+        if ($dynamic && $this->_cursor InstanceOf MongoCursor) {
             $cursor = $this->_cursor;
-            if (!is_callable(array($cursor, "getQuery"))) {
+            if (!is_callable(array($cursor, "Info"))) {
                 throw new Exception("Please upgrade your PECL/Mongo module to use this feature");
             }
             $document['dynamic'] = array();
-            $query  = $cursor->getQuery();
+            $query  = $cursor->Info();
             foreach ($query as $type => $value) {
                 $document['dynamic'][$type] = $value;
             }
