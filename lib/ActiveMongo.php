@@ -1256,7 +1256,7 @@ abstract class ActiveMongo implements Iterator
 
     final protected function doQuery()
     {
-        $col    = $this->_getCollection();
+        $col = $this->_getCollection();
         if (count($this->_columns) > 0) {
             $cursor = $col->find((array)$this->_query['query'], $this->_columns);
         } else {
@@ -1303,9 +1303,6 @@ abstract class ActiveMongo implements Iterator
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$column_str}'");
         } else if (count($column) == 2) {
-            if (is_array($value)) {
-                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
-            }
             switch ($column[1]) {
             case '>':
                 $op = '$gt';
@@ -1323,10 +1320,16 @@ abstract class ActiveMongo implements Iterator
             case '!=':
                 $op = '$ne';
                 break;
+            case 'near':
+                $op = '$near';
+                break;
             default:
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
             $value = array($op => $value);
+            if (is_array($value) || $op != '$near') {
+                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+            }
         } else if (is_array($value)) {
             $value = array('$in' => $value);
         }
