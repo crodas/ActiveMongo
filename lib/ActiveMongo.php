@@ -142,7 +142,7 @@ abstract class ActiveMongo implements Iterator
     private $_sort    = null;
     private $_limit   = 0;
     private $_skip    = 0;
-    private $_columns = null;
+    private $_properties = null;
     /* }}} */
 
     /**
@@ -802,7 +802,7 @@ abstract class ActiveMongo implements Iterator
      */
     final function reset()
     {
-        $this->_columns = null;
+        $this->_properties = null;
         $this->_cursor  = null;
         $this->_query   = null;
         $this->_sort    = null;
@@ -822,6 +822,9 @@ abstract class ActiveMongo implements Iterator
      */
     final function valid()
     {
+        if (!$this->_cursor InstanceOf MongoCursor) {
+            $this->doQuery();
+        }
         return $this->_cursor InstanceOf MongoCursor && $this->_cursor->valid();
     }
     // }}}
@@ -1254,11 +1257,35 @@ abstract class ActiveMongo implements Iterator
 
     // Fancy (and silly) query abstraction {{{
 
-    final protected function doQuery()
+    // _assertNoQuery() {{{
+    /**
+     *  Check if we can modify the query or not. We cannot modify
+     *  the query if we already asked to MongoDB, in this case the
+     *  object must be reset.
+     *
+     *  @return void
+     */
+    final private function _assertNoQuery()
     {
+        if ($this->_cursor InstanceOf MongoCursor) {
+            throw new ActiveMongo_Exception("You cannot modify the query, please reset the object");
+        }
+    }
+    // }}}
+
+    // doQuery() {{{
+    /**
+     *  Build the current request and send it to MongoDB.
+     *
+     *  @return this
+     */
+    final function doQuery()
+    {
+        $this->_assertNoQuery();
+
         $col = $this->_getCollection();
-        if (count($this->_columns) > 0) {
-            $cursor = $col->find((array)$this->_query['query'], $this->_columns);
+        if (count($this->_properties) > 0) {
+            $cursor = $col->find((array)$this->_query['query'], $this->_properties);
         } else {
             $cursor = $col->find((array)$this->_query['query']);
         }
@@ -1271,37 +1298,63 @@ abstract class ActiveMongo implements Iterator
         if ($this->_skip > 0) {
             $this->skip($this->_skip);
         }
+        
         /* Our cursor must be sent to ActiveMongo */
         $this->setCursor($cursor);
-    }
 
-    final function columns($columns)
+        return $this;
+    }
+    // }}}
+
+    // properties($props) {{{
+    /**
+     *  Select 'properties' or 'columns' to be included in the document,
+     *  by default all properties are included.
+     *
+     *  @param array $props
+     *
+     *  @return this
+     */ 
+    final function properties($props)
     {
-        if (!is_array($columns) && !is_string($columns)) {
+        $this->_assertNoQuery();
+
+        if (!is_array($props) && !is_string($props)) {
             return false;
         }
 
-        if (is_string($columns)) {
-            $columns = explode(",", $columns);
+        if (is_string($props)) {
+            $props = explode(",", $props);
         }
 
-        foreach ($columns as $id => $name) {
-            $columns[trim($name)] = 1;
-            unset($columns[$id]);
+        foreach ($props as $id => $name) {
+            $props[trim($name)] = 1;
+            unset($props[$id]);
         }
 
-        $this->_columns = $columns;
+        $this->_properties = $props;
+
+        return $this;
     }
 
+    final function columns($properties)
+    {
+       return $this->properties($properties);
+    }
+    // }}}
+
+    // where($property, $value) {{{
     /**
-     *  Where abstraction
+     *  Where abstraction.
      *
      */
-    final function where($column_str, $value)
+    final function where($property_str, $value)
     {
-        $column = explode(" ", $column_str);
+        $this->_assertNoQuery();
+
+        $column = explode(" ", $property_str);
         if (count($column) != 1 && count($column) != 2) {
-            throw new ActiveMongo_Exception("Failed while parsing '{$column_str}'");
+            throw new ActiveMongo_Exception("Failed while parsing '{$property_str}'");
         } else if (count($column) == 2) {
             switch ($column[1]) {
             case '>':
@@ -1335,10 +1388,23 @@ abstract class ActiveMongo implements Iterator
         }
 
         $this->_query['query'][$column[0]] =  $value;
-    }
 
+        return $this;
+    }
+    // }}}
+
+    // sort($sort_str) {{{
+    /**
+     *  Abstract the documents sorting.
+     *
+     *  @param string $sort_str List of properties to use as sorting
+     *
+     *  @return this
+     */
     final function sort($sort_str)
     {
+        $this->_assertNoQuery();
+
         $this->_sort = array();
         foreach ((array)explode(",", $sort_str) as $sort_part_str) {
             $sort_part = explode(" ", $sort_part_str, 2);
@@ -1364,16 +1430,33 @@ abstract class ActiveMongo implements Iterator
             }
             $this->_sort[ $sort_part[0] ] = $sort_part[1];
         }
-    }
 
+        return $this;
+    }
+    // }}}
+
+    // limit($limit, $skip) {{{
+    /**
+     *  Abstract the limitation and pagination of documents.
+     *
+     *  @param int $limit Number of max. documents to retrieve
+     *  @param int $skip  Number of documents to skip
+     *
+     *  @return this
+     */
     final function limit($limit=0, $skip=0)
     {
+        $this->_assertNoQuery();
+
         if ($limit < 0 || $skip < 0) {
             return false;
         }
         $this->_limit = $limit;
         $this->_skip  = $skip;
+
+        return $this;
     }
+    // }}}
 
     // }}}
 

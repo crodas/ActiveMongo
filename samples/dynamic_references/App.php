@@ -22,8 +22,7 @@ $user->save();
  * then same 'query' is going to be asked to the database.
  */
 $service = new Service;
-$service->user = $user->getID();
-$service->find();
+$service->where('user', $user->getID())->doQuery();
 
 /* save reference */
 $user->services = $service->getReference(true);
@@ -55,8 +54,7 @@ unset($user, $blg, $blg1, $twt);
 $debug=true;
 
 $users = new User;
-$users->username = "crodas";
-foreach ($users->find() as $user) {
+foreach ($users->where('username', 'crodas') as $user) {
     /* Load all references */
     $user->doDeferencing();
 

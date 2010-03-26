@@ -103,7 +103,10 @@ class PostModel extends ActiveMongo
     function updateAuthorInfo(MongoID $id)
     {
         $author = new AuthorModel;
-        $author->find($id);
+        $author->where('id', $id);
+
+        /* perform the query */
+        $author->doQuery();
 
         $document = array(
             '$set' => array(

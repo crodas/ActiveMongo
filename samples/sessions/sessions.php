@@ -88,9 +88,9 @@ class MongoSession extends ActiveMongo
     final public static function Read($id)
     {
         $session = self::$session;
-        $session->sid   = $id;
-        $session->valid = true;
-        if ($session->find()->count() == 0) {
+        $session->where('sid', $id)->where('valid', true);
+        if ($session->count() == 0) {
+            $session->sid   = $id;
             $session->valid = true;
             $session->save();
         }
