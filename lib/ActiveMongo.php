@@ -1296,7 +1296,7 @@ abstract class ActiveMongo implements Iterator
             $cursor->limit($this->_limit);
         }
         if ($this->_skip > 0) {
-            $this->skip($this->_skip);
+            $cursor->skip($this->_skip);
         }
         
         /* Our cursor must be sent to ActiveMongo */
@@ -1356,6 +1356,9 @@ abstract class ActiveMongo implements Iterator
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$property_str}'");
         } else if (count($column) == 2) {
+            if (is_array($value) && $column[1] != 'near') {
+                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+            }
             switch ($column[1]) {
             case '>':
                 $op = '$gt';
@@ -1380,9 +1383,6 @@ abstract class ActiveMongo implements Iterator
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
             $value = array($op => $value);
-            if (is_array($value) || $op != '$near') {
-                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
-            }
         } else if (is_array($value)) {
             $value = array('$in' => $value);
         }
@@ -1407,7 +1407,7 @@ abstract class ActiveMongo implements Iterator
 
         $this->_sort = array();
         foreach ((array)explode(",", $sort_str) as $sort_part_str) {
-            $sort_part = explode(" ", $sort_part_str, 2);
+            $sort_part = explode(" ", trim($sort_part_str), 2);
             switch(count($sort_part)) {
             case 1:
                 $sort_part[1] = 'ASC';
@@ -1426,7 +1426,7 @@ abstract class ActiveMongo implements Iterator
                 $sort_part[1] = -1;
                 break;
             default:
-                throw new ActiveMongo_Exception("Invalid sorting direction {$sort_part[1]}");
+                throw new ActiveMongo_Exception("Invalid sorting direction `{$sort_part[1]}`");
             }
             $this->_sort[ $sort_part[0] ] = $sort_part[1];
         }
