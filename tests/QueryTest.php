@@ -66,9 +66,24 @@ class QueryTest extends PHPUnit_Framework_TestCase
     function testClone()
     {
         $c = new Model1;
+        $c->a = 1;
+        $c->save();
 
+        $c->reset();
+        $this->assertLessThan($c->count(), 1);
         foreach ($c as $item) {
             $item_cloned = clone $item;
+            $item_cloned->c = 1;
+            $item_cloned->save();
+            try {
+                /* iterations are forbiden in cloned objects */
+                foreach ($item_cloned as $nitem) {
+                    $this->assertTrue(false);
+                }
+            } catch (Exception $e) {
+                $this->assertTrue(true);
+            }
         }
+
     }
 }
