@@ -62,4 +62,13 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $this->assertTrue(true);
         }
     }
+
+    function testClone()
+    {
+        $c = new Model1;
+
+        foreach ($c as $item) {
+            $item_cloned = clone $item;
+        }
+    }
 }

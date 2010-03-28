@@ -35,22 +35,6 @@
   +---------------------------------------------------------------------------------+
 */
 
-// Class FilterException {{{
-class  ActiveMongo_Exception extends Exception
-{
-}
-/**
- *  FilterException
- *
- *  This is Exception is thrown if any validation
- *  fails when save() is called.
- *
- */
-class ActiveMongo_FilterException extends ActiveMongo_Exception 
-{
-}
-// }}}
-
 // array get_document_vars(stdobj $obj) {{{
 /**
  *  Simple hack to avoid get private and protected variables
@@ -1466,6 +1450,7 @@ abstract class ActiveMongo implements Iterator
 }
 
 require_once dirname(__FILE__)."/Validators.php";
+require_once dirname(__FILE__)."/Exceptions.php";
 
 /*
  * Local variables:
