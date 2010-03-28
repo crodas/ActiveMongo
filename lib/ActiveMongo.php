@@ -64,7 +64,7 @@ function get_document_vars($obj)
  *  @version 1.0
  *
  */
-abstract class ActiveMongo implements Iterator 
+abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 {
 
     // properties {{{
@@ -858,6 +858,28 @@ abstract class ActiveMongo implements Iterator
     }
     // }}}
     
+    // }}}
+
+    //  ARRAY ACCESS {{{
+    final function offsetExists($offset)
+    {
+        return isset($this->$offset);
+    }
+    
+    final function offsetGet($offset)
+    {
+        return $this->$offset;
+    }
+
+    final function offsetSet($offset, $value)
+    {
+        $this->$offset = $value;
+    }
+
+    final function offsetUnset($offset)
+    {
+        unset($this->$offset);
+    }
     // }}}
 
     // REFERENCES {{{
