@@ -4,6 +4,7 @@ require "Models.php";
 require "ReferencesTest.php";
 require "ValidatorsTest.php";
 require "QueryTest.php";
+require "HookTest.php";
 
 define ("DB", "test");
 
@@ -13,6 +14,7 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
     {
         ActiveMongo::connect(DB, "localhost");
         Model1::drop();
+        Model2::drop();
     } 
 
     public static function suite()
@@ -21,6 +23,7 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
         $suite->addTestSuite('ReferencesTest');
         $suite->addTestSuite('ValidatorsTest');
         $suite->addTestSuite('QueryTest');
+        $suite->addTestSuite('HookTest');
         return $suite;
     }
 

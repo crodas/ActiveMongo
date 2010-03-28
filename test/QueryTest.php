@@ -7,9 +7,17 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $c = new Model1;
 
+        /* rand values */
+        $val1 = rand(1, 50);
+        $val2 = rand(1, 50);
+        $val3 = rand(1, 50);
+        $val4 = rand(1, 50);
+        $val5 = rand(1, 50);
+
+
         /* prepare the query */
-        $c->properties('a,b')->where('a >', 1)->where('b <', 1)->where('c !=', 1);
-        $c->sort('c DESC, a ASC')->limit(10, 15);
+        $c->properties('a,b')->where('a >', $val1)->where('b <', $val2)->where('c !=', $val3);
+        $c->sort('c DESC, a ASC')->limit($val4, $val5);
 
         /* perform it */
         $c->doQuery();
@@ -20,13 +28,13 @@ class QueryTest extends PHPUnit_Framework_TestCase
         /* expected cursor info */
         $eQuery = array(
             'ns' => DB.'.model1',
-            'limit' => 10,
-            'skip'  => 15,
+            'limit' => $val4,
+            'skip'  => $val5,
             'query' => array(
                 '$query' => array(
-                    'a' => array('$gt' => 1),
-                    'b' => array('$lt' => 1),
-                    'c' => array('$ne' => 1),
+                    'a' => array('$gt' => $val1),
+                    'b' => array('$lt' => $val2),
+                    'c' => array('$ne' => $val3),
                 ),
                 '$orderby' => array(
                     'c' => -1,
