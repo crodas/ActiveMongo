@@ -51,7 +51,7 @@ class ActiveMongo_FilterException extends ActiveMongo_Exception
 }
 // }}}
 
-// array get_object_vars_ex(stdobj $obj) {{{
+// array get_document_vars(stdobj $obj) {{{
 /**
  *  Simple hack to avoid get private and protected variables
  *
@@ -59,9 +59,11 @@ class ActiveMongo_FilterException extends ActiveMongo_Exception
  *
  *  @return array
  */
-function get_object_vars_ex($obj) 
+function get_document_vars($obj) 
 {
-    return get_object_vars($obj);
+    $document        =  get_object_vars($obj);
+    $document['_id'] = $obj->getID();
+    return $document;
 }
 // }}}
 
@@ -363,7 +365,7 @@ abstract class ActiveMongo implements Iterator
     final protected function getCurrentDocument($update=false, $current=false)
     {
         $document = array();
-        $object   = get_object_vars_ex($this);
+        $object   = get_document_vars($this);
 
         if (!$current) {
             $current = (array)$this->_current;
@@ -600,7 +602,7 @@ abstract class ActiveMongo implements Iterator
      */
     final function find($_id = null)
     {
-        $vars = get_object_vars_ex($this);
+        $vars = get_document_vars($this);
         foreach ($vars as $key => $value) {
             if (!$value) {
                 unset($vars[$key]);
@@ -641,31 +643,32 @@ abstract class ActiveMongo implements Iterator
      */
     final function save($async=true)
     {
-        $update = isset($this->_id) && $this->_id InstanceOf MongoID;
-        $conn   = $this->_getCollection();
-        $obj    = $this->getCurrentDocument($update);
-        if (count($obj) == 0) {
+        $update   = isset($this->_id) && $this->_id InstanceOf MongoID;
+        $conn     = $this->_getCollection();
+        $document = $this->getCurrentDocument($update);
+        $object   = get_document_vars($this);
+        if (count($document) == 0) {
             return; /*nothing to do */
         }
 
          /* PRE-save hook */
-        $this->triggerEvent('before_'.($update ? 'update' : 'create'), array(&$obj));
+        $this->triggerEvent('before_'.($update ? 'update' : 'create'), array(&$document, $object));
 
         if ($update) {
-            $conn->update(array('_id' => $this->_id), $obj);
-            foreach ($obj as $key => $value) {
+            $conn->update(array('_id' => $this->_id), $document, array('safe' => $async));
+            foreach ($document as $key => $value) {
                 if ($key[0] == '$') {
                     continue;
                 }
                 $this->_current[$key] = $value;
             }
         } else {
-            $conn->insert($obj, $async);
-            $this->_id      = $obj['_id'];
-            $this->_current = $obj; 
+            $conn->insert($document, $async);
+            $this->_id      = $document['_id'];
+            $this->_current = $document; 
         }
 
-        $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($obj));
+        $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($document, $object));
     }
     // }}}
 
@@ -1038,7 +1041,7 @@ abstract class ActiveMongo implements Iterator
     final function doDeferencing($refs=array())
     {
         /* Get current document */
-        $document = get_object_vars_ex($this);
+        $document = get_document_vars($this);
 
         if (count($refs)==0) {
             /* Inspect the whole document */
