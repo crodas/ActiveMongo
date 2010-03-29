@@ -1360,7 +1360,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  Where abstraction.
      *
      */
-    final function where($property_str, $value)
+    final function where($property_str, $value=null)
     {
         $this->_assertNotInQuery();
 
@@ -1368,42 +1368,98 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$property_str}'");
         } else if (count($column) == 2) {
-            if (is_array($value) && $column[1] != 'near') {
-                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
-            }
-            switch ($column[1]) {
+
+            $exp_scalar = true;
+            switch (strtolower($column[1])) {
             case '>':
             case '$gt':
                 $op = '$gt';
                 break;
+
             case '>=':
             case '$gte':
                 $op = '$gte';
+                break;
+
             case '<':
             case '$lt':
                 $op = '$lt';
                 break;
+
             case '<=':
             case '$lte':
                 $op = '$lte';
                 break;
+
             case '==':
             case '$eq':
             case '=':
                 $op = '$eq';
+                break;
+
             case '!=':
             case '<>':
             case '$ne':
-                $op = '$ne';
+                if (is_array($value)) {
+                    $op = '$nin';
+                    $exp_scalar = false;
+                } else {
+                    $op = '$ne';
+                }
                 break;
+
+            case '%':
+            case 'mod':
+            case '$mod':
+                $op = '$mod';
+                break;
+
+            case 'exists':
+            case '$exists':
+                $value = true;
+                $op    = '$exists';
+                break;
+
+            /* regexp  */
+            case 'regexp':
+                $value = new MongoRegex($value);
+                $op = NULL;
+                break;
+
+            /* arrays */
+            case 'in':
+            case '$in':
+                $exp_scalar = false;
+                $op = '$in';
+                break;
+
+            case '$nin':
+            case 'nin':
+                $exp_scalar = false;
+                $op = '$nin';
+                break;
+
+
+            /* geo operations */
             case 'near':
             case '$near':
                 $op = '$near';
+                $exp_scalar = false;
                 break;
+
             default:
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
-            $value = array($op => $value);
+
+            if ($exp_scalar && is_array($value)) {
+                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+            } else if (!$exp_scalar && !is_array($value)) {
+                throw new ActiveMongo_Exception("The operation {$column[1]} expected an Array");
+            }
+
+            if ($op) {
+                $value = array($op => $value);
+            }
         } else if (is_array($value)) {
             $value = array('$in' => $value);
         }

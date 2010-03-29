@@ -17,6 +17,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         /* prepare the query */
         $c->properties('a,b')->where('a >', $val1)->where('b <', $val2)->where('c !=', $val3);
+        $c->where('h regexp', '/[a-f0-9]+/');
         $c->sort('c DESC, a ASC')->limit($val4, $val5);
 
         /* perform it */
@@ -35,6 +36,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
                     'a' => array('$gt' => $val1),
                     'b' => array('$lt' => $val2),
                     'c' => array('$ne' => $val3),
+                    'h' => new MongoRegex('/[a-f0-9]+/'),
                 ),
                 '$orderby' => array(
                     'c' => -1,
@@ -48,6 +50,29 @@ class QueryTest extends PHPUnit_Framework_TestCase
         );
 
         $this->assertEquals($sQuery['dynamic'], $eQuery);
+    }
+
+    function testQueryRequireArray()
+    {
+        $c = new Model1;
+        try {
+            $c->where('c near', 'string');
+            $this->assertTrue(false);
+        } catch  (ActiveMongo_Exception $e) {
+            $this->assertTrue(true);
+        }
+        try {
+            $c->where('c in', 55);
+            $this->assertTrue(false);
+        } catch  (ActiveMongo_Exception $e) {
+            $this->assertTrue(true);
+        }
+        try {
+            $c->where('c nin', 559);
+            $this->assertTrue(false);
+        } catch  (ActiveMongo_Exception $e) {
+            $this->assertTrue(true);
+        }
     }
 
     function testOnQueryModifyError()
