@@ -39,14 +39,17 @@
 /**
  *  Simple hack to avoid get private and protected variables
  *
- *  @param obj 
+ *  @param object $obj 
+ *  @param bool   $include_id
  *
  *  @return array
  */
-function get_document_vars($obj) 
+function get_document_vars($obj, $include_id=true) 
 {
-    $document        =  get_object_vars($obj);
-    $document['_id'] = $obj->getID();
+    $document =  get_object_vars($obj);
+    if ($include_id && $obj->getID()) {
+        $document['_id'] = $obj->getID();
+    }
     return $document;
 }
 // }}}
@@ -558,7 +561,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final protected function setResult($obj)
     {
         /* Unsetting previous results, if any */
-        foreach (array_keys((array)$this->_current) as $key) {
+        foreach (array_keys(get_document_vars($this, false)) as $key) {
             unset($this->$key);
         }
 
@@ -1266,7 +1269,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // Fancy (and silly) query abstraction {{{
 
-    // _assertNoQuery() {{{
+    // _assertNotInQuery() {{{
     /**
      *  Check if we can modify the query or not. We cannot modify
      *  the query if we already asked to MongoDB, in this case the
@@ -1274,7 +1277,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return void
      */
-    final private function _assertNoQuery()
+    final private function _assertNotInQuery()
     {
         if ($this->_cursor InstanceOf MongoCursor) {
             throw new ActiveMongo_Exception("You cannot modify the query, please reset the object");
@@ -1290,7 +1293,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function doQuery()
     {
-        $this->_assertNoQuery();
+        $this->_assertNotInQuery();
 
         $col = $this->_getCollection();
         if (count($this->_properties) > 0) {
@@ -1326,7 +1329,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */ 
     final function properties($props)
     {
-        $this->_assertNoQuery();
+        $this->_assertNotInQuery();
 
         if (!is_array($props) && !is_string($props)) {
             return false;
@@ -1359,9 +1362,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function where($property_str, $value)
     {
-        $this->_assertNoQuery();
+        $this->_assertNotInQuery();
 
-        $column = explode(" ", $property_str);
+        $column = explode(" ", trim($property_str));
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$property_str}'");
         } else if (count($column) == 2) {
@@ -1370,22 +1373,31 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
             switch ($column[1]) {
             case '>':
+            case '$gt':
                 $op = '$gt';
                 break;
             case '>=':
+            case '$gte':
                 $op = '$gte';
             case '<':
+            case '$lt':
                 $op = '$lt';
                 break;
             case '<=':
+            case '$lte':
                 $op = '$lte';
                 break;
             case '==':
+            case '$eq':
+            case '=':
                 $op = '$eq';
             case '!=':
+            case '<>':
+            case '$ne':
                 $op = '$ne';
                 break;
             case 'near':
+            case '$near':
                 $op = '$near';
                 break;
             default:
@@ -1412,7 +1424,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function sort($sort_str)
     {
-        $this->_assertNoQuery();
+        $this->_assertNotInQuery();
 
         $this->_sort = array();
         foreach ((array)explode(",", $sort_str) as $sort_part_str) {
@@ -1455,7 +1467,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function limit($limit=0, $skip=0)
     {
-        $this->_assertNoQuery();
+        $this->_assertNotInQuery();
 
         if ($limit < 0 || $skip < 0) {
             return false;
