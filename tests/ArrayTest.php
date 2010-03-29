@@ -20,6 +20,8 @@ class ArrayTest extends PHPUnit_Framework_TestCase
             $this->assertFalse(isset($item['foobar']));
             $this->assertTrue(isset($item['a']));
             $this->assertEquals($item['a'], $item->a);
+            $item['foobar'] = rand(1, 1000);
+            $this->assertEquals($item['foobar'], $item->foobar);
         }
     }
 
