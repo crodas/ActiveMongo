@@ -161,7 +161,8 @@ class PostModel extends ActiveMongo
     {
         var_dump(array('a' => 1, 'a'=>2));
         $c = $this->_getCollection();
-        $d = $c->find(array('author_name' => new MongoRegex("/^c/")) );
+        //$d = $c->find(array('author_name' => array('$all' => array(new MongoRegex("/^c/"), new MongoRegex('/s$/')  ))));
+        $d = $c->find(array('author_name' => array('$all' => array(new MongoRegex("/^c/"), new MongoRegex('/s$/')  ))));
 
         var_dump($d->count());
         var_dump($d->info());

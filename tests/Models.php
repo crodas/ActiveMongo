@@ -37,3 +37,7 @@ class Model2 extends ActiveMongo
     }
 
 }
+
+class Model3 extends ActiveMongo
+{
+}
