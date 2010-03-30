@@ -692,7 +692,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  After the operation is done, the criteria is deleted.
      *
      *  @param array $value Values to set
-     *  @param bool  $safe  Whether or not to peform the operation save
+     *  @param bool  $safe  Whether or not peform the operation safely
      *
      *  @return bool
      *
