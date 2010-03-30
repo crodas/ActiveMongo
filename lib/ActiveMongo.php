@@ -1365,6 +1365,20 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $this->_assertNotInQuery();
 
+        if (is_array($property_str)) {
+            if ($value != null) {
+                throw new ActiveMongo_Expception("Invalid parameters");
+            }
+            foreach ($property_str as $property => $value) {
+                if (is_numeric($property)) {
+                    $property = $value;
+                    $value    = 0;
+                }
+                $this->where($property, $value);
+            }
+            return $this;
+        }
+
         $column = explode(" ", trim($property_str));
         if (count($column) != 1 && count($column) != 2) {
             throw new ActiveMongo_Exception("Failed while parsing '{$property_str}'");

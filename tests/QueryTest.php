@@ -71,6 +71,66 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($sQuery['dynamic'], $eQuery);
     }
 
+
+    function testQueryArray()
+    {
+        $c = new Model1;
+
+        /* rand values */
+        $val1 = rand(1, 50);
+        $val2 = rand(1, 50);
+        $val3 = rand(1, 50);
+        $val4 = rand(1, 50);
+        $val5 = rand(1, 50);
+
+
+        /* prepare the query */
+        $filter = array(
+            'a > ' => $val1, 
+            'b < ' => $val2,
+            'c != ' => $val3,
+            'h regexp' => '/[a-f0-9]+/',
+            'x in ' => array(1,2),
+            'x nin ' => array(4),
+            'y == ' => array(4)
+        );
+        $c->properties('a,b')->sort('c DESC, a ASC')->limit($val4, $val5);;
+        $c->where($filter);
+
+        /* perform it */
+        $c->doQuery();
+
+        /* Get cursor info */
+        $sQuery = $c->getReference(true);
+
+        /* expected cursor info */
+        $eQuery = array(
+            'ns' => DB.'.model1',
+            'limit' => $val4,
+            'skip'  => $val5,
+            'query' => array(
+                '$query' => array(
+                    'a' => array('$gt' => $val1),
+                    'b' => array('$lt' => $val2),
+                    'c' => array('$ne' => $val3),
+                    'h' => new MongoRegex('/[a-f0-9]+/'),
+                    'x' => array('$in' => array(1,2), '$nin' => array(4)),
+                    'y' => array('$all' => array(4)),
+                ),
+                '$orderby' => array(
+                    'c' => -1,
+                    'a' => 1,
+                ),
+            ),
+            'fields' => array(
+                'a' => 1,
+                'b' => 1,
+            )
+        );
+
+        $this->assertEquals($sQuery['dynamic'], $eQuery);
+    }
+
     function testQueryRequireArray()
     {
         $c = new Model1;
