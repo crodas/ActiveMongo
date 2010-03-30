@@ -187,6 +187,29 @@ class QueryTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testMultipleUpdate()
+    {
+        $str = sha1(uniqid());
+        $query = array(
+            'int >' => 5,
+            'int <' => 30,
+            'int !=' => 6,
+        );
+        $c = new Model3;
+        $c->where($query);
+        $c->update(array('newproperty' => $str));
+
+        $c->where(array('int >' => 5, 'int <' => 30));
+        foreach ($c as $item) {
+            if ($item['int'] == 6) {
+                /* 6 is not included */
+                $this->assertFalse(isset($item['newproperty']));
+            } else {
+                $this->assertEquals($str, $item['newproperty']);
+            }
+        }
+    }
+
     function testOnQueryModifyError()
     {
         try {

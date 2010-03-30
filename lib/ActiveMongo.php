@@ -679,6 +679,40 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // Update {{{
+    /**
+     *  Multiple updates.
+     *  
+     *  This method perform multiple updates when a given 
+     *  criteria matchs (using where).
+     *
+     *  By default the update is perform safely, but it can be 
+     *  changed.
+     *
+     *  After the operation is done, the criteria is deleted.
+     *
+     *  @param array $value Values to set
+     *  @param bool  $safe  Whether or not to peform the operation save
+     *
+     *  @return bool
+     *
+     */
+    function update(Array $value, $safe=true)
+    {
+        $criteria = (array) $this->_query['query'];
+        $options  = array('multiple' => true, 'safe' => $safe);
+
+        /* update */
+        $col = $this->_getCollection();
+        $col->update($criteria, array('$set' => $value), $options);
+
+        /* reset object */
+        $this->reset();
+
+        return true;
+    }
+    // }}}
+
     // void drop() {{{
     /**
      *  Delete the current colleciton and all its documents
