@@ -244,6 +244,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
                 $this->assertTrue(true);
             }
         }
+    }
 
+    function testDelete()
+    {
+        $c = new Model3;
+        $c->where('int < ', 100);
+        $c->delete();
+
+        $this->assertEquals($c->count(), 4900);
     }
 }

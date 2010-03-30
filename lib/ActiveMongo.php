@@ -668,12 +668,25 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function delete()
     {
-        if ($this->valid()) {
+        if ($this->_cursor InstanceOf MongoCursor) {
             $document = array('_id' => $this->_id);
             $this->triggerEvent('before_delete', array($document));
             $result = $this->_getCollection()->remove($document);
             $this->triggerEvent('after_delete', array($document));
+            $this->setResult(array());
             return $result;
+        } else {
+            $criteria = (array) $this->_query['query'];
+            var_dump($criteria);die();
+
+            /* update */
+            $col = $this->_getCollection();
+            $col->delete($criteria);
+
+            /* reset object */
+            $this->reset();
+
+            return true;
         }
         return false;
     }
@@ -699,6 +712,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     function update(Array $value, $safe=true)
     {
+        $this->_assertNotInQuery();
+
         $criteria = (array) $this->_query['query'];
         $options  = array('multiple' => true, 'safe' => $safe);
 
