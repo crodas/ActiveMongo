@@ -564,6 +564,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         foreach (array_keys(get_document_vars($this, false)) as $key) {
             unset($this->$key);
         }
+        $this->_id = null;
 
         /* Add our current resultset as our object's property */
         foreach ((array)$obj as $key => $value) {
@@ -1394,7 +1395,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             case '==':
             case '$eq':
             case '=':
-                $op = '$eq';
+                if (is_array($value)) {
+                    $op = '$all';
+                    $exp_scalar = false;
+                } else {
+                    $op = '$eq';
+                }
                 break;
 
             case '!=':
@@ -1422,6 +1428,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
             /* regexp  */
             case 'regexp':
+            case 'regex':
                 $value = new MongoRegex($value);
                 $op = NULL;
                 break;
@@ -1464,7 +1471,23 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $value = array('$in' => $value);
         }
 
-        $this->_query['query'][$column[0]] =  $value;
+        $spot = & $this->_query['query'][$column[0]];
+        if (is_array($value)) {
+            $spot[key($value)] =  current($value);
+        } else {
+            /* simulate AND among same properties if 
+             * multiple values is passed for same property
+             */
+            if (isset($spot)) {
+                if (is_array($spot)) {
+                    $spot['$all'][] = $value;
+                } else {
+                    $spot = array('$all' => array($spot, $value));
+                }
+            } else {
+                $spot =  $value;
+            }
+        }
 
         return $this;
     }
