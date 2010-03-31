@@ -29,11 +29,10 @@ class Model2 extends ActiveMongo
 
     function update_refs($m1)
     {
-        $col = $this->_getCollection();
-        $filter  = array('M1' => $m1['_id']);
-        $doc     = array('$set' => array('a' => $m1['a']));
-        $options = array('multiple' => 1, 'safe' => true);
-        $col->update($filter, $doc, $options);
+        /* reset just in case */
+        $this->reset();
+        $this->where('M1', $m1['_id']);
+        $this->Update(array('a' => $m1['a']));
     }
 
 }
