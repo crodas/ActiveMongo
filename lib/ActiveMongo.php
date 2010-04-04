@@ -361,8 +361,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
         $this->findReferences($object);
 
-        $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object));
         $this->triggerEvent('before_validate', array(&$object));
+        $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object));
 
         foreach ($object as $key => $value) {
             if (!$value) {
@@ -423,8 +423,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             return array();
         }
 
-        $this->triggerEvent('after_validate_'.($update?'update':'creation'), array(&$object));
         $this->triggerEvent('after_validate', array(&$document));
+        $this->triggerEvent('after_validate_'.($update?'update':'creation'), array(&$object));
 
         return $document;
     }
