@@ -37,6 +37,23 @@ class HookTest extends PHPUnit_Framework_TestCase
         foreach ($m2->where("M1", $m1->getID()) as $item) {
             $this->assertEquals($m1->a, $item->a);
         }
+    }
+
+    function testBeforeValidate()
+    {
+        Model3::addEvent("before_validate", function (&$obj) {
+            $obj['b'] = md5($obj['a']);
+        });
+        $c = new Model3;
+        $c->a = 'cesar';
+        $c->save();
+        $this->assertEquals($c->b, md5($c->a));
+        $this->assertNotEquals($c->getID(), "");
+
+        /**/
+        $c->a = 'rodas';
+        $c->save();
+        $this->assertEquals($c->b, md5($c->a));
 
     }
 }

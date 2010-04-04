@@ -644,16 +644,21 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
         if ($update) {
             $conn->update(array('_id' => $this->_id), $document, array('safe' => $async));
-            foreach ($document as $key => $value) {
-                if ($key[0] == '$') {
-                    continue;
+            if (isset($document['$set'])) {
+                foreach ($document['$set'] as $key => $value) {
+                    $this->_current[$key] = $value;
+                    $this->$key = $value;
                 }
-                $this->_current[$key] = $value;
+            }
+            if (isset($document['$unset'])) {
+                foreach ($document['$unset'] as $key => $value) {
+                    unset($this->_current[$key]);
+                    unset($this->$key);
+                }
             }
         } else {
             $conn->insert($document, $async);
-            $this->_id      = $document['_id'];
-            $this->_current = $document; 
+            $this->setResult($document);
         }
 
         $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($document, $object));
