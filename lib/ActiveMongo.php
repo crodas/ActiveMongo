@@ -69,6 +69,9 @@ function get_document_vars($obj, $include_id=true)
  */
 abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 {
+    //{{{ Constants 
+    const FIND_AND_MODIFY = 0x001;
+    // }}}
 
     // properties {{{
     /** 
@@ -125,6 +128,21 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  @type MongoCursor
      */
     private $_cursor  = null;
+    /**
+     *  Extended result cursor, used for FindAndModify now
+     *
+     *  @type int
+     */
+    private $_cursor_ex  = null;
+    private $_cursor_ex_value;
+    /**
+     *  Count the findandmodify result counts  
+     *
+     *  @tyep array
+     */
+    private $_findandmodify_cnt = 0;
+    /* value to modify */
+    private $_findandmodify;
 
     /* {{{ Silly but useful query abstraction  */
     private $_query   = null;
@@ -162,7 +180,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     protected function getCollectionName()
     {
-        return strtolower(get_class($this));
+        if (isset($this)) {
+            return strtolower(get_class($this));
+        } else {
+            return strtolower(get_called_class());
+        }
     }
     // }}}
 
@@ -242,7 +264,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
             self::$_conn = new Mongo(self::$_host);
         }
-        $dbname = $this->getDatabaseName();
+        if (isset($this)) {
+            $dbname = $this->getDatabaseName();
+        } else {
+            $dbname = self::getDatabaseName();
+        }
         if (!isSet(self::$_dbs[$dbname])) {
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
@@ -260,7 +286,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final protected function _getCollection()
     {
-        $colName = $this->getCollectionName();
+        if (isset($this)) {
+            $colName = $this->getCollectionName();
+        } else {
+            $colName = self::getCollectionName();
+        }
         if (!isset(self::$_collections[$colName])) {
             self::$_collections[$colName] = self::_getConnection()->selectCollection($colName);
         }
@@ -775,6 +805,23 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // batchInsert
+    /** 
+     *  Perform a batchInsert of objects.
+     *
+     *  @todo Add hook and validation support
+     *
+     *  @return bool
+     */
+    final public static function batchInsert(Array $document, $safe=true)
+    {
+        if (__CLASS__ == get_called_class()) {
+            throw new ActiveMongo_Exception("Invalid batchInsert usage");
+        }
+        return self::_getCollection()->batchInsert($document, array("safe" => $safe));
+    }
+    // }}}
+
     // bool addIndex(array $columns, array $options) {{{
     /**
      *  addIndex
@@ -846,11 +893,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function reset()
     {
         $this->_properties = null;
-        $this->_cursor  = null;
-        $this->_query   = null;
-        $this->_sort    = null;
-        $this->_limit   = 0;
-        $this->_skip    = 0;
+        $this->_cursor     = null;
+        $this->_cursor_ex  = null;
+        $this->_query      = null;
+        $this->_sort       = null;
+        $this->_limit      = 0;
+        $this->_skip       = 0;
         $this->setResult(array());
     }
     // }}}
@@ -865,10 +913,26 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function valid()
     {
-        if (!$this->_cursor InstanceOf MongoCursor) {
-            $this->doQuery();
+        $valid = false;
+        if (!$this->_cursor_ex) {
+            if (!$this->_cursor InstanceOf MongoCursor) {
+                 $this->doQuery();
+            }
+            $valid = $this->_cursor InstanceOf MongoCursor && $this->_cursor->valid();
+        } else {
+            switch ($this->_cursor_ex) {
+            case self::FIND_AND_MODIFY:
+                if ($this->_limit > $this->_findandmodify_cnt) {
+                    $this->_execFindAndModify();
+                    $valid = $this->_cursor_ex_value['ok'] == 1;
+                }
+                break;
+            default:
+                throw new ActiveMongo_Exception("Invalid _cursor_ex value");
+            }
         }
-        return $this->_cursor InstanceOf MongoCursor && $this->_cursor->valid();
+
+        return $valid;
     }
     // }}}
 
@@ -883,7 +947,17 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if ($this->_cloned) {
             throw new MongoException("Cloned objects can't iterate");
         }
-        return $this->_cursor->next();
+        if (!$this->_cursor_ex) {
+            return $this->_cursor->next();
+        } else {
+            switch ($this->_cursor_ex) {
+            case self::FIND_AND_MODIFY:
+                $this->_cursor_ex_value = NULL;
+                break;
+            default:
+                throw new ActiveMongo_Exception("Invalid _cursor_ex value");
+            }
+        }
     }
     // }}}
 
@@ -896,7 +970,20 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function current()
     { 
-        $this->setResult($this->_cursor->current());
+        if (!$this->_cursor_ex) {
+            $this->setResult($this->_cursor->current());
+        } else {
+            switch ($this->_cursor_ex) {
+            case self::FIND_AND_MODIFY:
+                if (count($this->_cursor_ex_value) == 0) {
+                    $this->_execFindAndModify();
+                }
+                $this->setResult($this->_cursor_ex_value['value']);
+                break;
+            default:
+                throw new ActiveMongo_Exception("Invalid _cursor_ex value");
+            }
+        }
         return $this;
     }
     // }}}
@@ -907,10 +994,21 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function rewind()
     {
-        if (!$this->_cursor InstanceOf MongoCursor) {
-            $this->doQuery();
+        if (!$this->_cursor_ex) {
+            /* rely on MongoDB cursor */
+            if (!$this->_cursor InstanceOf MongoCursor) {
+                $this->doQuery();
+            }
+            return $this->_cursor->rewind();
+        } else {
+            switch ($this->_cursor_ex) {
+            case self::FIND_AND_MODIFY:
+                $this->_findandmodify_cnt = 0;
+                break;
+            default:
+                throw new ActiveMongo_Exception("Invalid _cursor_ex value");
+            }
         }
-        return $this->_cursor->rewind();
     }
     // }}}
     
@@ -1325,14 +1423,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // _assertNotInQuery() {{{
     /**
      *  Check if we can modify the query or not. We cannot modify
-     *  the query if we already asked to MongoDB, in this case the
+     *  the query if we're iterating over and oldest query, in this case the
      *  object must be reset.
      *
      *  @return void
      */
     final private function _assertNotInQuery()
     {
-        if ($this->_cursor InstanceOf MongoCursor) {
+        if ($this->_cursor InstanceOf MongoCursor || $this->_cursor_ex != NULL) {
             throw new ActiveMongo_Exception("You cannot modify the query, please reset the object");
         }
     }
@@ -1346,6 +1444,15 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function doQuery()
     {
+        if ($this->_cursor_ex) {
+            switch ($this->_cursor_ex) {
+            case self::FIND_AND_MODIFY:
+                $this->_cursor_ex_value = NULL;
+                return;
+            default:
+                throw new ActiveMongo_Exception("Invalid _cursor_ex value");
+            }
+        }
         $this->_assertNotInQuery();
 
         $col = $this->_getCollection();
@@ -1488,7 +1595,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
             case 'exists':
             case '$exists':
-                $value = true;
+                if ($value === NULL) {
+                    $value = true;
+                }
                 $op    = '$exists';
                 break;
 
@@ -1621,6 +1730,45 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $this->_skip  = $skip;
 
         return $this;
+    }
+    // }}}
+
+    // FindAndModify(Array $document) {{{
+    /**
+     *  findAndModify
+     *  
+     *
+     */
+    final function findAndModify($document)
+    {
+        $this->_assertNotInQuery();
+
+        if (count($document) === 0) {
+            throw new ActiveMongo_Exception("Empty \$document is not allowed");
+        }
+
+        $this->_cursor_ex     = self::FIND_AND_MODIFY;
+        $this->_findandmodify = $document;
+
+        return $this;
+    }
+
+    private function _execFindAndModify()
+    {
+        $query = (array)$this->_query['query'];
+
+        $query = array(
+            "findandmodify" => $this->getCollectionName(),
+            "query" => $query,
+            "update" => array('$set' => $this->_findandmodify),
+            "new" => true,
+        );
+        $this->_cursor_ex_value = $this->sendCMD($query);
+        if (isset($this->_query['sort'])) {
+            $query["sort"] =  $this->_query['sort'];
+        }
+
+        $this->_findandmodify_cnt++;
     }
     // }}}
 

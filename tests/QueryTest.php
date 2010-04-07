@@ -6,14 +6,17 @@ class QueryTest extends PHPUnit_Framework_TestCase
     function __construct()
     {
         Model3::drop();
-        $c = new Model3;
+        $data = array();
         for ($i=0; $i < 5000; $i++) {
-            $c->reset();
-            $c->int = $i;
-            $c->str = sha1(uniqid());
-            $c->save(false);
+            $c['int'] = $i;
+            $c['str'] = sha1(uniqid());
+            $data[] = $c;
         }
-        $c->reset();
+
+        /* batchInsert */
+        Model3::batchInsert($data);
+
+        $c = new Model3;
         $this->assertEquals($c->count(), 5000);
     }
 
@@ -249,9 +252,36 @@ class QueryTest extends PHPUnit_Framework_TestCase
     function testDelete()
     {
         $c = new Model3;
-        $c->where('int <= ', 100);
+        $c->where('int < ', 100);
         $c->delete();
 
         $this->assertEquals($c->count(), 4900);
+    }
+
+    function testFindAndModify()
+    {
+        $c = new Model3;
+        $c->where('int <= ', 1000);
+        $c->where('processing exists', false);
+        $c->limit(50);
+        $c->findAndModify(array("processing" => true));
+
+        $i = 0;
+        foreach ($c as $d) {
+            $this->assertEquals($d->processing, true);
+            $i++;
+        }
+        $this->assertEquals($i, 50);
+
+        try {
+            $c->reset();
+            $c->where('int <= ', 1000);
+            $c->where('processing exists', false);
+            $c->limit(50);
+            $c->findAndModify(array());
+            $this->assertTrue(false);
+        } catch (ActiveMongo_Exception $e) {
+            $this->assertTrue(true);
+        }
     }
 }
