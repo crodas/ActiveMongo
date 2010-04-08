@@ -23,17 +23,18 @@ class HookTest extends PHPUnit_Framework_TestCase
         $m1->b = 2;
         $m1->save();
 
+        $data = array();
         for ($i=0; $i < 1000; $i++) {
-            $m2 = new Model2;
-            $m2->M1 = $m1->getID();
-            $m2->a  = $m1->a;
-            $m2->save();
+            $m2['M1'] = $m1->getID();
+            $m2['a']  = $m1->a;
+            $data[] = $m2;
         }
+        Model2::batchInsert($data);
 
         $m1->a = 50;
         $m1->save();
 
-        $m2->reset();
+        $m2 = new Model2;
         foreach ($m2->where("M1", $m1->getID()) as $item) {
             $this->assertEquals($m1->a, $item->a);
         }
