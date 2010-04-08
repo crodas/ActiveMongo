@@ -117,6 +117,20 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     private static $_host;
     /**
+     *  User (Auth)
+     *
+     *  @type string
+     */
+    private static $_user;
+    
+        /**
+     *  Password (Auth)
+     *
+     *  @type string
+     */
+    private static $_pwd;
+
+    /**
      *  Current document
      *
      *  @type array
@@ -238,13 +252,17 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @param string $db   Database name
      *  @param string $host Host to connect
+     *  @param string $user   User (Auth)
+     *  @param string $pwd Password (Auth)   
      *
      *  @return void
      */
-    final public static function connect($db, $host='localhost')
+    final public static function connect($db, $host='localhost', $user = null, $pwd=null)
     {
         self::$_host = $host;
         self::$_db   = $db;
+        self::$_user = $user;
+        self::$_pwd   = $pwd;
     }
     // }}}
 
@@ -272,6 +290,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if (!isSet(self::$_dbs[$dbname])) {
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
+        if ( !is_null(self::$_user ) &&   !is_null(self::$_pwd )  ) {
+        	
+         	self::$_dbs[$dbname]->authenticate(	self::$_user,self::$_pwd ) ;
+					
+					 
+        }
+        
+        
         return self::$_dbs[$dbname];
     }
     // }}}
