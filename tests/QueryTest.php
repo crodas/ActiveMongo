@@ -7,14 +7,19 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         Model3::drop();
         $data = array();
+
+        /* Valid data */
         for ($i=0; $i < 5000; $i++) {
-            $c['int'] = $i;
-            $c['str'] = sha1(uniqid());
-            $data[] = $c;
+            $data[] = array('int' => $i, 'str' => sha1(uniqid()));
         }
 
+        /* Invalid data, shouldn't be inserted */
+        $data[] = array('xint' => $i, 'str' => sha1(uniqid()));
+        $data[] = array('xint' => $i, 'str' => sha1(uniqid()));
+        $data[] = array('xint' => $i, 'str' => sha1(uniqid()));
+
         /* batchInsert */
-        Model3::batchInsert($data);
+        Model3::batchInsert($data, true, true);
 
         $c = new Model3;
         $this->assertEquals($c->count(), 5000);

@@ -47,6 +47,7 @@ class HookTest extends PHPUnit_Framework_TestCase
         });
         $c = new Model3;
         $c->a = 'cesar';
+        $c->int = rand(1, 50);
         $c->save();
         $this->assertEquals($c->b, md5($c->a));
         $this->assertNotEquals($c->getID(), "");

@@ -39,4 +39,10 @@ class Model2 extends ActiveMongo
 
 class Model3 extends ActiveMongo
 {
+    public $int;
+    public $str;
+
+    static $validates_presence_of = array(
+        'int'
+    );
 }

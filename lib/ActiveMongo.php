@@ -518,7 +518,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // triggerEvent(string $event, Array $events_params) {{{
     final function triggerEvent($event, Array $events_params = array())
     {
-        $events  = & self::$_events[get_class($this)][$event];
+        if (!isset($this)) {
+            $class = get_called_class();
+        } else {
+            $class = get_class($this);
+        }
+        $events  = & self::$_events[$class][$event];
         $sevents = & self::$_super_events[$event];
 
         if (!is_array($events_params)) {
@@ -526,7 +531,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         /* Super-Events handler receives the ActiveMongo class name as first param */
-        $sevents_params = array_merge(array(get_class($this)), $events_params);
+        $sevents_params = array_merge(array($class), $events_params);
 
         foreach (array('events', 'sevents') as $event_type) {
             if (count($$event_type) > 0) {
@@ -540,6 +545,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         /* Some natives events are allowed to be called 
          * as methods, if they exists
          */
+        if (!isset($this)) {
+            return;
+        }
         switch ($event) {
         case 'before_create':
         case 'before_update':
@@ -835,16 +843,39 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     /** 
      *  Perform a batchInsert of objects.
      *
-     *  @todo Add hook and validation support
+     *  @param array $documents         Arrays of documents to insert
+     *  @param bool  $safe              True if a safe will be performed, this means data validation, and wait for MongoDB OK reply
+     *  @param bool  $on_error_continue If an error happen while validating an object, if it should continue or not
      *
      *  @return bool
      */
-    final public static function batchInsert(Array $document, $safe=true)
+    final public static function batchInsert(Array $documents, $safe=true, $on_error_continue=true)
     {
         if (__CLASS__ == get_called_class()) {
             throw new ActiveMongo_Exception("Invalid batchInsert usage");
         }
-        return self::_getCollection()->batchInsert($document, array("safe" => $safe));
+        
+        if ($safe) {
+            foreach ($documents as $id => $doc) {
+                $valid = false;
+                if (is_array($doc)) {
+                    try {
+                        self::triggerEvent('before_create', array(&$doc));
+                        self::triggerEvent('before_validate', array(&$doc, $doc));
+                        self::triggerEvent('before_validate_creation', array(&$doc, $doc));
+                        $valid = true;
+                    } catch (Exception $e) {}
+                }
+                if (!$valid) {
+                    if (!$on_error_continue) {
+                        throw new ActiveMongo_FilterException("Document $id is invalid");
+                    }
+                    unset($documents[$id]);
+                }
+            }
+        }
+
+        return self::_getCollection()->batchInsert($documents, array("safe" => $safe));
     }
     // }}}
 
