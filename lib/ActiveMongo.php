@@ -735,8 +735,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function delete()
     {
+    	
+        $document = array('_id' => $this->_id);
         if ($this->_cursor InstanceOf MongoCursor) {
-            $document = array('_id' => $this->_id);
             $this->triggerEvent('before_delete', array($document));
             $result = $this->_getCollection()->remove($document);
             $this->triggerEvent('after_delete', array($document));
@@ -746,7 +747,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $criteria = (array) $this->_query['query'];
 
             /* remove */
+            $this->triggerEvent('before_delete', array($document));
             $this->_getCollection()->remove($criteria);
+            $this->triggerEvent('after_delete', array($document));
 
             /* reset object */
             $this->reset();
