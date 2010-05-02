@@ -218,6 +218,32 @@ class QueryTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testNullUpdate()
+    {
+        $id = 0;
+
+        $c = new  Model3;
+        $c->int  = 5;
+        $c->arr  = array(5);
+        $c->bool = true;
+        $c->null = NULL;
+        $c->save();
+        $c->int   = 0;
+        $c->arr[] = 0;
+        $c->bool  = false;
+        $id     = $c->getId();
+        $c->save();
+
+        /* now empty $c and query for `int` value */
+        $c->reset();
+        $c->where('_id', $id);
+        $c->doQuery();
+        $this->assertEquals($c->int, 0);
+        $this->assertEquals($c->arr, array(5, 0));
+        $this->assertEquals($c->bool, false);
+        $this->assertEquals($c->null, NULL);
+    }
+
     function testOnQueryModifyError()
     {
         try {

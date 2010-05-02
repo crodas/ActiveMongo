@@ -421,9 +421,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object));
 
         foreach ($object as $key => $value) {
-            if (!$value) {
-                continue;
-            }
             if ($update) {
                 if (is_array($value) && isset($current[$key])) {
                     /**
