@@ -1,5 +1,9 @@
 <?php
 
+class Dummy extends ActiveMongo
+{
+}
+
 class Model1 extends ActiveMongo
 {
     public $a;

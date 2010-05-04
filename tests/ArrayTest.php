@@ -25,4 +25,17 @@ class ArrayTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testArrayUnsetNull()
+    {
+        $arr = array(1,2,3,4);
+        $doc = new Dummy;
+        $doc->arr = $arr;
+        $doc->save();
+        unset($arr[1], $arr[3]);
+        $doc->arr = $arr;
+        $doc->save();
+
+        $this->assertEquals($arr, $doc->arr);
+    }
+
 }

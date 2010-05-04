@@ -69,6 +69,7 @@ function get_document_vars($obj, $include_id=true)
  */
 abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 {
+
     //{{{ Constants 
     const FIND_AND_MODIFY = 0x001;
     // }}}
