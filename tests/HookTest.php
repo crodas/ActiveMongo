@@ -2,6 +2,7 @@
 
 class HookTest extends PHPUnit_Framework_TestCase
 {
+    private $deleted;
 
     /**
      *  Hooking test, update model2 when model1 changes
@@ -56,6 +57,37 @@ class HookTest extends PHPUnit_Framework_TestCase
         $c->a = 'rodas';
         $c->save();
         $this->assertEquals($c->b, md5($c->a));
-
+    }
+    
+    function testBeforeDelete()
+    {
+        Model1::addEvent('before_delete', array($this, 'on_delete'));
+        $m1 = new Model1;
+        $m1->a = rand();
+        $m1->save();
+        $id = (string) $m1->getId();
+        
+        $m1->delete();
+        
+        $this->assertEquals($id, $this->deleted);
+    }
+    
+    function on_delete($doc)
+    {
+        $this->deleted = (string) $doc['_id'];
+    }
+    
+    function testAfterDelete()
+    {
+        Model3::addEvent('after_delete', array($this, 'on_delete'));
+        $m3 = new Model3;
+        $m3->a = '';
+        $m3->int = rand();
+        $m3->save();
+        $id = (string) $m3->getId();
+        
+        $m3->delete();
+        
+        $this->assertEquals($id, $this->deleted);
     }
 }

@@ -292,10 +292,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
         if ( !is_null(self::$_user ) &&   !is_null(self::$_pwd )  ) {
-        	
-         	self::$_dbs[$dbname]->authenticate(	self::$_user,self::$_pwd ) ;
-					
-					 
+            self::$_dbs[$dbname]->authenticate(self::$_user,self::$_pwd);         
         }
         
         
@@ -737,7 +734,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function delete()
     {
-    	
+        
         $document = array('_id' => $this->_id);
         if ($this->_cursor InstanceOf MongoCursor) {
             $this->triggerEvent('before_delete', array($document));
