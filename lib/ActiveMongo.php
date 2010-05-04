@@ -551,10 +551,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'before_update':
         case 'before_validate':
         case 'before_delete':
+        case 'before_drop':
         case 'after_create':
         case 'after_update':
         case 'after_validate':
         case 'after_delete':
+        case 'after_drop':
             $fnc    = array($this, $event);
             $params = "events_params";
             if (is_callable($fnc)) {
@@ -809,7 +811,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             return false;
         }
         $obj = new $class;
-        return $obj->_getCollection()->drop();
+        $obj->triggerEvent('before_drop');
+        $result = $obj->_getCollection()->drop();
+        $obj->triggerEvent('after_drop');
+        return $result;
+        
     }
     // }}}
 
