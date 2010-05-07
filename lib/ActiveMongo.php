@@ -1473,7 +1473,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function key()
     {
-        return $this->getID();
+        return (string)$this->getID();
     }
     // }}}
 
