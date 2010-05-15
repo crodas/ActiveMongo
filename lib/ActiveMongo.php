@@ -62,7 +62,7 @@ function get_document_vars($obj, $include_id=true)
  *  and efficient update.
  *
  *  @author César D. Rodas <crodas@php.net>
- *  @license PHP License
+ *  @license BSD License
  *  @package ActiveMongo
  *  @version 1.0
  *
@@ -326,6 +326,26 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // GET DOCUMENT TO SAVE OR UPDATE {{{
 
+    // getDocumentVars() {{{
+    /**
+     *  getDocumentVars
+     *
+     *
+     *
+     */
+    final protected function getDocumentVars()
+    {
+        $variables = array();
+        foreach ((array)$this->__sleep() as $var) {
+            if (!isset($this->$var) && $this->$var !== NULL) {
+                continue;
+            }
+            $variables[$var] = $this->$var;
+        }
+        return $variables;
+    }
+    // }}}
+
     // bool getCurrentSubDocument(array &$document, string $parent_key, array $values, array $past_values) {{{
     /**
      *  Generate Sub-document
@@ -406,7 +426,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final protected function getCurrentDocument($update=false, $current=false)
     {
         $document = array();
-        $object   = get_document_vars($this);
+        $object   = $this->getDocumentVars();
 
         if (!$current) {
             $current = (array)$this->_current;
@@ -695,7 +715,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $update   = isset($this->_id) && $this->_id InstanceOf MongoID;
         $conn     = $this->_getCollection();
         $document = $this->getCurrentDocument($update);
-        $object   = get_document_vars($this);
+        $object   = $this->getDocumentVars();
         if (count($document) == 0) {
             return; /*nothing to do */
         }
@@ -1833,6 +1853,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // }}}
+
+    // __sleep() {{{
+    /**
+     *  Return a list of properties to serialize, to save
+     *  into MongoDB
+     *
+     *  @return array
+     */
+    function __sleep()
+    {
+        return array_keys(get_document_vars($this));
+    }
     // }}}
 
 }
