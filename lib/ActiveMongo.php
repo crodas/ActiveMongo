@@ -1368,11 +1368,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             /* Search to MongoDB once for all IDs found */
             $req->find($ids);
 
-            if ($req->count() != count($refs)) {
-                $total    = $req->count();
-                $expected = count($refs);
-                throw new MongoException("Dereferencing error, MongoDB replied {$total} objects, we expected {$expected}");
-            }
 
             /* Replace our references by its objects */
             foreach ($refs as $ref) {
