@@ -1029,7 +1029,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             throw new MongoException("Cloned objects can't iterate");
         }
         if (!$this->_cursor_ex) {
-            return $this->_cursor->next();
+            $result =  $this->_cursor->next();
+            $this->current();
+            return $result;
         } else {
             switch ($this->_cursor_ex) {
             case self::FIND_AND_MODIFY:
@@ -1080,7 +1082,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             if (!$this->_cursor InstanceOf MongoCursor) {
                 $this->doQuery();
             }
-            return $this->_cursor->rewind();
+            $result = $this->_cursor->rewind();
+            $this->current();
+            return $result;
         } else {
             switch ($this->_cursor_ex) {
             case self::FIND_AND_MODIFY:
