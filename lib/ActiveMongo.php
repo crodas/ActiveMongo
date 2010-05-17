@@ -1185,8 +1185,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                    $pkey[] = $key;
                    $refs[] = array('ref' => $value, 'key' => $pkey);
                } else {
-                   $parent_key[] = $key;
-                   $this->getDocumentReferences($value, $refs, $parent_key);
+                   $parent_key1 = $parent_key;
+                   $parent_key1[] = $key;
+                   $this->getDocumentReferences($value, $refs, $parent_key1);
                }
            }
         }
