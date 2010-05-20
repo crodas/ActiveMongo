@@ -6,6 +6,7 @@ require "ValidatorsTest.php";
 require "QueryTest.php";
 require "HookTest.php";
 require "ArrayTest.php";
+require "Bugs.php";
 require "__SleepTest.php";
 
 define ("DB", "test");
@@ -27,6 +28,7 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
         $suite->addTestSuite('ReferencesTest');
         $suite->addTestSuite('ValidatorsTest');
         $suite->addTestSuite('QueryTest');
+        $suite->addTestSuite('BugsTest');
         $suite->addTestSuite('HookTest');
         $suite->addTestSuite('ArrayTest');
         $suite->addTestSuite('SleepTest');
