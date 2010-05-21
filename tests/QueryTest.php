@@ -5,7 +5,9 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
     function __construct()
     {
-        Model3::drop();
+        try { 
+            Model3::drop();
+        } catch (Exception $e) {}
         $data = array();
 
         /* Valid data */
@@ -23,6 +25,13 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         $c = new Model3;
         $this->assertEquals($c->count(), 5000);
+    }
+
+    function testInstall()
+    {
+        ActiveMongo::install();
+        $indexes = Model1::getIndexes();
+        $this->assertTrue(isset($indexes[1]['key']['a']));
     }
 
     function testQuery()
@@ -282,11 +291,75 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
     function testDelete()
     {
+        /* Delete using a criteria */
         $c = new Model3;
         $c->where('int < ', 100);
         $c->delete();
 
         $this->assertEquals($c->count(), 4900);
+
+        /* delete on iteration (element by element) */
+        $c = new Model3;
+        $c->where('int', array(200, 300));
+
+        $i = 0;
+        foreach ($c as $d) {
+            $d->delete();
+            $this->assertFalse(isset($c->int));
+            $i++;
+        }
+
+        $c->reset();
+
+        $this->assertEquals(2, $i);
+        $this->assertEquals($c->count(), 4898);
+    }
+
+    function testDrop()
+    {
+        $c = new Dummy;
+        $c['foo'] = 'bar';
+        $c->save();
+
+        $this->assertFalse(ActiveMongo::drop());
+        $this->assertTrue(Dummy::drop());
+        try {
+            $this->assertFalse(Dummy::drop());
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+    }
+
+    function testInvalidBatchInsert()
+    {
+        /* Invalid document for Model2 */
+        $documents = array(
+            array('foo' => 'bar'),
+        );
+        try {
+            /* Invalid call */
+            ActiveMongo::BatchInsert($documents);
+            $this->assertTrue(False);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        try {
+            Model2::BatchInsert($documents);
+            $this->assertTrue(False);
+        } catch (ActiveMongo_FilterException $e) {
+            $this->assertTrue(FALSE);
+        } catch (MongoException $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        try {
+            Model2::BatchInsert($documents, TRUE, FALSE);
+            $this->assertTrue(False);
+        } catch (ActiveMongo_FilterException $e) {
+            $this->assertTrue(TRUE);
+        }
+
     }
 
     function testInvalidQueries()

@@ -16,10 +16,18 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
     public function __construct()
     {
         ActiveMongo::connect(DB, "localhost");
-        Dummy::drop();
-        Model1::drop();
-        Model2::drop();
-        Model3::drop();
+        try {
+            Dummy::drop();
+        } catch (Exception $e) {}
+        try {
+            Model1::drop();
+        } catch (Exception $e) {}
+        try {
+            Model2::drop();
+        } catch (Exception $e) {}
+        try {
+            Model3::drop();
+        } catch (Exception $e) {}
     } 
 
     public static function suite()

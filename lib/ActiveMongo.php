@@ -213,7 +213,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     protected function getDatabaseName()
     {
         if (is_null(self::$_db)) {
-            throw new MongoException("There is no information about the default DB name");
+            throw new ActiveMongo_Exception("There is no information about the default DB name");
         }
         return self::$_db;
     }
@@ -831,7 +831,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $obj->triggerEvent('before_drop');
         $result = $obj->_getCollection()->drop();
         $obj->triggerEvent('after_drop');
-        return $result;
+        if ($result['ok'] != 1) {
+            throw new ActiveMongo_Exception($result['errmsg']);
+        }
+        return TRUE;
         
     }
     // }}}
@@ -932,6 +935,18 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // Array getIndexes() {{{
+    /**
+     *  Return an array with all indexes
+     *
+     *  @return array
+     */
+    final static function getIndexes()
+    {
+        return self::_getCollection()->getIndexInfo();
+    }
+    // }}}
+
     // string __toString() {{{
     /**
      *  To String
@@ -1026,7 +1041,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function next()
     {
         if ($this->_cloned) {
-            throw new MongoException("Cloned objects can't iterate");
+            throw new ActiveMongo_Exception("Cloned objects can't iterate");
         }
         if (!$this->_cursor_ex) {
             $result =  $this->_cursor->next();
@@ -1138,7 +1153,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function getReference($dynamic=FALSE)
     {
         if (!$this->getID() && !$dynamic) {
-            return null;
+            return NULL;
         }
 
         $document = array(
@@ -1208,7 +1223,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private function _deferencingCreateObject($class)
     {
         if (!is_subclass_of($class, __CLASS__)) {
-            throw new MongoException("Fatal Error, imposible to create ActiveMongo object of {$class}");
+            throw new ActiveMongo_Exception("Fatal Error, imposible to create ActiveMongo object of {$class}");
         }
         return new $class;
     }
