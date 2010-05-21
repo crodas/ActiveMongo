@@ -8,9 +8,9 @@ class ValidatorsTest extends PHPUnit_Framework_TestCase
             $c = new Model1;
             $c->b = 'cesar';
             $c->save();
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch (ActiveMongo_FilterException $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
     }
 }

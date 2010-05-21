@@ -81,9 +81,9 @@ class MongoLogger extends ActiveMongo
         $log->context = $errcontext;
 
         /* save it fast */
-        $log->save(false);
+        $log->save(FALSE);
 
-        return false;
+        return FALSE;
     }
 
     /** 
@@ -100,7 +100,7 @@ class MongoLogger extends ActiveMongo
         $log->file      = $exception->getFile();
         $log->code      = $exception->getCode();
         $log->trace     = $exception->getTrace();
-        $log->save(false);
+        $log->save(FALSE);
     }
 
     /**

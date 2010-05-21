@@ -25,7 +25,7 @@ $service = new Service;
 $service->where('user', $user->getID())->doQuery();
 
 /* save reference */
-$user->services = $service->getReference(true);
+$user->services = $service->getReference(TRUE);
 $user->save();
 
 
@@ -51,7 +51,7 @@ $blg1->save();
 unset($user, $blg, $blg1, $twt);
 
 /* Output the document that is going to be sent to MongoDB */
-$debug=true;
+$debug=TRUE;
 
 $users = new User;
 foreach ($users->where('username', 'crodas') as $user) {

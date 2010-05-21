@@ -19,7 +19,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $data[] = array('xint' => $i, 'str' => sha1(uniqid()));
 
         /* batchInsert */
-        Model3::batchInsert($data, true, true);
+        Model3::batchInsert($data, TRUE, TRUE);
 
         $c = new Model3;
         $this->assertEquals($c->count(), 5000);
@@ -49,7 +49,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->doQuery();
 
         /* Get cursor info */
-        $sQuery = $c->getReference(true);
+        $sQuery = $c->getReference(TRUE);
 
         /* expected cursor info */
         $eQuery = array(
@@ -109,7 +109,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->doQuery();
 
         /* Get cursor info */
-        $sQuery = $c->getReference(true);
+        $sQuery = $c->getReference(TRUE);
 
         /* expected cursor info */
         $eQuery = array(
@@ -144,21 +144,21 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c = new Model1;
         try {
             $c->where('c near', 'string');
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch  (ActiveMongo_Exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
         try {
             $c->where('c in', 55);
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch  (ActiveMongo_Exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
         try {
             $c->where('c nin', 559);
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch  (ActiveMongo_Exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
     }
 
@@ -225,12 +225,12 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c = new  Model3;
         $c->int  = 5;
         $c->arr  = array(5);
-        $c->bool = true;
+        $c->bool = TRUE;
         $c->null = NULL;
         $c->save();
         $c->int   = 0;
         $c->arr[] = 0;
-        $c->bool  = false;
+        $c->bool  = FALSE;
         $id     = $c->getId();
         $c->save();
 
@@ -240,7 +240,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->doQuery();
         $this->assertEquals($c->int, 0);
         $this->assertEquals($c->arr, array(5, 0));
-        $this->assertEquals($c->bool, false);
+        $this->assertEquals($c->bool, FALSE);
         $this->assertEquals($c->null, NULL);
     }
 
@@ -251,9 +251,9 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $c->where('a', 1);
             $c->doQuery();
             $c->where('b', 4);
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch (ActiveMongo_Exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
     }
 
@@ -272,10 +272,10 @@ class QueryTest extends PHPUnit_Framework_TestCase
             try {
                 /* iterations are forbidden in cloned objects */
                 foreach ($item_cloned as $nitem) {
-                    $this->assertTrue(false);
+                    $this->assertTrue(FALSE);
                 }
             } catch (Exception $e) {
-                $this->assertTrue(true);
+                $this->assertTrue(TRUE);
             }
         }
     }
@@ -289,17 +289,38 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($c->count(), 4900);
     }
 
+    function testInvalidQueries()
+    {
+        $c = new Model3;
+
+        try {
+            $c->where("invalid field property", 3);
+            $this->assertTrue(FALSE);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        try {
+            $c->where(array(
+                "b" => 1,
+            ), TRUE);
+            $this->assertTrue(FALSE);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+    }
+
     function testFindAndModify()
     {
         $c = new Model3;
         $c->where('int <= ', 1000);
-        $c->where('processing exists', false);
+        $c->where('processing exists', FALSE);
         $c->limit(50);
-        $c->findAndModify(array("processing" => true));
+        $c->findAndModify(array("processing" => TRUE));
 
         $i = 0;
         foreach ($c as $d) {
-            $this->assertEquals($d->processing, true);
+            $this->assertEquals($d->processing, TRUE);
             $i++;
         }
         $this->assertEquals($i, 50);
@@ -307,12 +328,12 @@ class QueryTest extends PHPUnit_Framework_TestCase
         try {
             $c->reset();
             $c->where('int <= ', 1000);
-            $c->where('processing exists', false);
+            $c->where('processing exists', FALSE);
             $c->limit(50);
             $c->findAndModify(array());
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch (ActiveMongo_Exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
     }
 }

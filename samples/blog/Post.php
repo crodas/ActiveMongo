@@ -88,7 +88,7 @@ class PostModel extends ActiveMongo
         if (!$value instanceof MongoID) {
             throw new Exception("Invalid MongoID");
         }
-        return true;
+        return TRUE;
     }
 
     /**
@@ -119,9 +119,9 @@ class PostModel extends ActiveMongo
             'author' => $id,
         );
 
-        $this->_getCollection()->update($filter, $document, array('multiple' => true));
+        $this->_getCollection()->update($filter, $document, array('multiple' => TRUE));
 
-        return true;
+        return TRUE;
     }
 
     /**
@@ -146,7 +146,7 @@ class PostModel extends ActiveMongo
             "email" => $email,
             "comment" => $comment,
         );
-        return true;
+        return TRUE;
     }
 
     function setup()

@@ -76,22 +76,22 @@ class MongoSession extends ActiveMongo
 
     final public static function Open($path, $name)
     {
-        return true;
+        return TRUE;
     }
 
     final public static function Close()
     {
         self::$session = null;
-        return true;
+        return TRUE;
     }
 
     final public static function Read($id)
     {
         $session = self::$session;
-        $session->where('sid', $id)->where('valid', true);
+        $session->where('sid', $id)->where('valid', TRUE);
         if ($session->count() == 0) {
             $session->sid   = $id;
-            $session->valid = true;
+            $session->valid = TRUE;
             $session->save();
         }
         return $session->data;
@@ -102,9 +102,9 @@ class MongoSession extends ActiveMongo
         $session = self::$session;
         $session->data = $ses_data;
         $session->ts   = new MongoDate();
-        $session->save(false);
+        $session->save(FALSE);
 
-        return true;
+        return TRUE;
     }
 
     final public static function Destroy($id)

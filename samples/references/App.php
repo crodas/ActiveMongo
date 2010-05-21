@@ -79,7 +79,7 @@ $user->save();
 unset($user, $blg, $blg1, $twt);
 
 /* Output the document that is going to be sent to MongoDB */
-$debug=true;
+$debug=TRUE;
 
 $users = new User;
 foreach ($users->where('username', 'crodas') as $user) {

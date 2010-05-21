@@ -35,7 +35,7 @@ class User extends ActiveMongo
         if (strlen($value) < 5) {
             throw new ActiveMongo_FilterException("Username too short");
         }
-        return true;
+        return TRUE;
     }
 
 }

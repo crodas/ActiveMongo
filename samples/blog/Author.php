@@ -63,7 +63,7 @@ class AuthorModel extends ActiveMongo
             throw new ActiveMongo_FilterException("Username too short");
         }
 
-        return true;
+        return TRUE;
     }
 
     /**
