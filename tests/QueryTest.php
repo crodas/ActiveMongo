@@ -234,7 +234,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         $c = new  Model3;
         $c->int  = 5;
-        $c->arr  = array(5);
+        $c->arr  = array(5, array(1));
         $c->bool = TRUE;
         $c->null = NULL;
 
@@ -243,20 +243,33 @@ class QueryTest extends PHPUnit_Framework_TestCase
         /* Now nothing should be done */
         $this->assertEquals(NULL, $c->save());
 
-        $c->int   = 0;
-        $c->arr[] = 0;
-        $c->bool  = FALSE;
-        $id       = $c->getId();
+        $c->int      = 0;
+        $c->arr[]    = 0;
+        $c->arr[1][] = 1;
+        $c->arr[1][] = 2;
+        $c->arr[1][] = 3;
+        $c->bool     = FALSE;
+        $c->foobar   = NULL;
+        $id          = $c->getId();
 
+        /* Updating */
         $this->assertEquals(TRUE, $c->save());
         $this->assertEquals(NULL, $c->save());
+
+        unset($c->arr[1][1]);
+        unset($c->foobar);
+
+        /* Updating */
+        $this->assertEquals(TRUE, $c->save());
+        $this->assertEquals(NULL, $c->save());
+
 
         /* now empty $c and query for `int` value */
         $c->reset();
         $c->where('_id', $id);
         $c->doQuery();
         $this->assertEquals($c->int, 0);
-        $this->assertEquals($c->arr, array(5, 0));
+        $this->assertEquals($c->arr, array(5,array(1,NULL, 2,3), 0));
         $this->assertEquals($c->bool, FALSE);
         $this->assertEquals($c->null, NULL);
     }
