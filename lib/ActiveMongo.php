@@ -142,13 +142,13 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @type MongoCursor
      */
-    private $_cursor  = null;
+    private $_cursor  = NULL;
     /**
      *  Extended result cursor, used for FindAndModify now
      *
      *  @type int
      */
-    private $_cursor_ex  = null;
+    private $_cursor_ex  = NULL;
     private $_cursor_ex_value;
     /**
      *  Count the findandmodify result counts  
@@ -160,11 +160,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private $_findandmodify;
 
     /* {{{ Silly but useful query abstraction  */
-    private $_query   = null;
-    private $_sort    = null;
+    private $_query   = NULL;
+    private $_sort    = NULL;
     private $_limit   = 0;
     private $_skip    = 0;
-    private $_properties = null;
+    private $_properties = NULL;
     /* }}} */
 
     /**
@@ -212,7 +212,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     protected function getDatabaseName()
     {
-        if (is_null(self::$_db)) {
+        if (is_NULL(self::$_db)) {
             throw new ActiveMongo_Exception("There is no information about the default DB name");
         }
         return self::$_db;
@@ -258,7 +258,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return void
      */
-    final public static function connect($db, $host='localhost', $user = null, $pwd=null)
+    final public static function connect($db, $host='localhost', $user = NULL, $pwd=NULL)
     {
         self::$_host = $host;
         self::$_db   = $db;
@@ -277,8 +277,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final protected function _getConnection()
     {
-        if (is_null(self::$_conn)) {
-            if (is_null(self::$_host)) {
+        if (is_NULL(self::$_conn)) {
+            if (is_NULL(self::$_host)) {
                 self::$_host = 'localhost';
             }
             self::$_conn = new Mongo(self::$_host);
@@ -291,7 +291,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if (!isSet(self::$_dbs[$dbname])) {
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
-        if ( !is_null(self::$_user ) &&   !is_null(self::$_pwd )  ) {
+        if ( !is_NULL(self::$_user ) &&   !is_NULL(self::$_pwd )  ) {
             self::$_dbs[$dbname]->authenticate(self::$_user,self::$_pwd);         
         }
         
@@ -337,7 +337,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $variables = array();
         foreach ((array)$this->__sleep() as $var) {
-            if (!isset($this->$var) && $this->$var !== NULL) {
+            if (!property_exists($this, $var)) {
                 continue;
             }
             $variables[$var] = $this->$var;
@@ -378,7 +378,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 /**
                  *  Inner document detected
                  */
-                if (!isset($past_values[$key]) || !is_array($past_values[$key])) {
+                if (!array_key_exists($key, $past_values) || !is_array($past_values[$key])) {
                     /**
                      *  We're lucky, it is a new sub-document,
                      *  we simple add it
@@ -395,7 +395,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                     }
                 }
                 continue;
-            } else if (!isset($past_values[$key]) || $past_values[$key] != $value) {
+            } else if (!array_key_exists($key, $past_values) || $past_values[$key] !== $value) {
                 $document['$set'][$super_key] = $value;
             }
         }
@@ -435,8 +435,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
         $this->findReferences($object);
 
-        $this->triggerEvent('before_validate', array(&$object));
-        $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object));
+        $this->triggerEvent('before_validate', array(&$object, $current));
+        $this->triggerEvent('before_validate_'.($update?'update':'creation'), array(&$object, $current));
 
         foreach ($object as $key => $value) {
             if ($update) {
@@ -461,12 +461,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                     if (!$this->getCurrentSubDocument($document, $key, $value, $current[$key])) {
                         throw new Exception("{$key}: Array and documents are not compatible");
                     }
-                } else if(!isset($current[$key]) || $value !== $current[$key]) {
+                } else if(!array_key_exists($key, $current) || $value !== $current[$key]) {
                     /**
                      *  It is 'linear' field that has changed, or 
                      *  has been modified.
                      */
-                    $past_value = isset($current[$key]) ? $current[$key] : null;
+                    $past_value = isset($current[$key]) ? $current[$key] : NULL;
                     $this->runFilter($key, $value, $past_value);
                     $document['$set'][$key] = $value;
                 }
@@ -475,7 +475,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                  *  It is a document insertation, so we 
                  *  create the document.
                  */
-                $this->runFilter($key, $value, null);
+                $this->runFilter($key, $value, NULL);
                 $document[$key] = $value;
             }
         }
@@ -645,7 +645,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         foreach (array_keys(get_document_vars($this, FALSE)) as $key) {
             unset($this->$key);
         }
-        $this->_id = null;
+        $this->_id = NULL;
 
         /* Add our current resultset as our object's property */
         foreach ((array)$obj as $key => $value) {
@@ -669,7 +669,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *    @return object this
      */
-    final function find($_id = null)
+    final function find($_id = NULL)
     {
         $vars = get_document_vars($this);
         foreach ($vars as $key => $value) {
@@ -682,7 +682,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 unset($vars[$key]); /* delete old value */
             }
         }
-        if ($_id != null) {
+        if ($_id != NULL) {
             if (is_array($_id)) {
                 $vars['_id'] = array('$in' => $_id);
             } else {
@@ -716,6 +716,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $conn     = $this->_getCollection();
         $document = $this->getCurrentDocument($update);
         $object   = $this->getDocumentVars();
+
+        if (isset($this->_id)) {
+            $object['_id'] = $this->_id;
+        }
+
         if (count($document) == 0) {
             return; /*nothing to do */
         }
@@ -727,14 +732,40 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $conn->update(array('_id' => $this->_id), $document, array('safe' => $async));
             if (isset($document['$set'])) {
                 foreach ($document['$set'] as $key => $value) {
-                    $this->_current[$key] = $value;
-                    $this->$key = $value;
+                    if (strpos($key, ".") === FALSE) {
+                        $this->_current[$key] = $value;
+                        $this->$key = $value;
+                    } else {
+                        $keys = explode(".", $key);
+                        $key  = $keys[0];
+                        $arr  = & $this->$key;
+                        $arrc = & $this->_current[$key];
+                        for ($i=1; $i < count($keys)-1; $i++) {
+                            $arr  = &$arr[$keys[$i]];
+                            $arrc = &$arrc[$keys[$i]]; 
+                        }
+                        $arr [ $keys[$i] ] = $value;
+                        $arrc[ $keys[$i] ] = $value;
+                    }
                 }
             }
             if (isset($document['$unset'])) {
                 foreach ($document['$unset'] as $key => $value) {
-                    unset($this->_current[$key]);
-                    unset($this->$key);
+                    if (strpos($key, ".") === FALSE) {
+                        unset($this->_current[$key]);
+                        unset($this->$key);
+                    } else {
+                        $keys = explode(".", $key);
+                        $key  = $keys[0];
+                        $arr  = & $this->$key;
+                        $arrc = & $this->_current[$key];
+                        for ($i=1; $i < count($keys)-1; $i++) {
+                            $arr  = &$arr[$keys[$i]];
+                            $arrc = &$arrc[$keys[$i]]; 
+                        }
+                        unset($arr [ $keys[$i] ]);
+                        unset($arrc[ $keys[$i] ]);
+                    }
                 }
             }
         } else {
@@ -743,6 +774,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($document, $object));
+
+        return TRUE;
     }
     // }}}
 
@@ -988,11 +1021,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function reset()
     {
-        $this->_properties = null;
-        $this->_cursor     = null;
-        $this->_cursor_ex  = null;
-        $this->_query      = null;
-        $this->_sort       = null;
+        $this->_properties = NULL;
+        $this->_cursor     = NULL;
+        $this->_cursor_ex  = NULL;
+        $this->_query      = NULL;
+        $this->_sort       = NULL;
         $this->_limit      = 0;
         $this->_skip       = 0;
         $this->setResult(array());
@@ -1191,7 +1224,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return void
      */
-    final protected function getDocumentReferences($document, &$refs, $parent_key=null)
+    final protected function getDocumentReferences($document, &$refs, $parent_key=NULL)
     {
         foreach ($document as $key => $value) {
            if (is_array($value)) {
@@ -1616,12 +1649,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  Where abstraction.
      *
      */
-    final function where($property_str, $value=null)
+    final function where($property_str, $value=NULL)
     {
         $this->_assertNotInQuery();
 
         if (is_array($property_str)) {
-            if ($value != null) {
+            if ($value != NULL) {
                 throw new ActiveMongo_Exception("Invalid parameters");
             }
             foreach ($property_str as $property => $value) {

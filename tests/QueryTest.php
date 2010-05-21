@@ -3,7 +3,7 @@
 class QueryTest extends PHPUnit_Framework_TestCase
 {
 
-    function __construct()
+    function testBulkInserts()
     {
         try { 
             Model3::drop();
@@ -231,17 +231,25 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $id = 0;
 
+
         $c = new  Model3;
         $c->int  = 5;
         $c->arr  = array(5);
         $c->bool = TRUE;
         $c->null = NULL;
-        $c->save();
+
+        /* Testing Save also :-) */
+        $this->assertEquals(TRUE, $c->save());
+        /* Now nothing should be done */
+        $this->assertEquals(NULL, $c->save());
+
         $c->int   = 0;
         $c->arr[] = 0;
         $c->bool  = FALSE;
-        $id     = $c->getId();
-        $c->save();
+        $id       = $c->getId();
+
+        $this->assertEquals(TRUE, $c->save());
+        $this->assertEquals(NULL, $c->save());
 
         /* now empty $c and query for `int` value */
         $c->reset();
@@ -381,6 +389,26 @@ class QueryTest extends PHPUnit_Framework_TestCase
         } catch (Exception $e) {
             $this->assertTrue(TRUE);
         }
+
+        
+        try {
+            $c->sort(" , , ");
+            $this->assertTrue(FALSE);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        try {
+            $c->sort("c DESC, field BAR");
+            $this->assertTrue(FALSE);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        /* These are valid, so no exception should be thrown */
+        $c->sort("foo ASC, bar DESC");
+        $c->sort("foo DESC");
+        $c->sort("foo");
     }
 
     function testFindAndModify()

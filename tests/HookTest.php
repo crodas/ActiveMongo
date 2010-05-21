@@ -28,7 +28,7 @@ class HookTest extends PHPUnit_Framework_TestCase
         for ($i=0; $i < 1000; $i++) {
             $m2['M1'] = $m1->getID();
             $m2['a']  = $m1->a;
-            $data[] = $m2;
+            $data[]   = $m2;
         }
         Model2::batchInsert($data);
 
