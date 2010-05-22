@@ -33,9 +33,9 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
     public static function suite()
     {
         $suite = new ActiveMongoSuite('ActiveMongo Tests');
+        $suite->addTestSuite('QueryTest');
         $suite->addTestSuite('ReferencesTest');
         $suite->addTestSuite('ValidatorsTest');
-        $suite->addTestSuite('QueryTest');
         $suite->addTestSuite('BugsTest');
         $suite->addTestSuite('HookTest');
         $suite->addTestSuite('ArrayTest');

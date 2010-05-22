@@ -541,10 +541,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $events  = & self::$_events[$class][$event];
         $sevents = & self::$_super_events[$event];
 
-        if (!is_array($events_params)) {
-            return FALSE;
-        }
-
         /* Super-Events handler receives the ActiveMongo class name as first param */
         $sevents_params = array_merge(array($class), $events_params);
 
@@ -1196,7 +1192,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             'class' => get_class($this),
         );
 
-        if ($dynamic && $this->_cursor InstanceOf MongoCursor) {
+        if ($dynamic) {
+            if (!$this->_cursor InstanceOf MongoCursor) {
+                $this->doQuery();
+            }
+
             $cursor = $this->_cursor;
             if (!is_callable(array($cursor, "Info"))) {
                 throw new Exception("Please upgrade your PECL/Mongo module to use this feature");
@@ -1310,7 +1310,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $cursor->limit($request['limit']);
         }
         if ($request['skip'] > 0) {
-            $cursor->limit($request['limit']);
+            $cursor->skip($request['limit']);
         }
 
         $this->setCursor($cursor);
@@ -1719,7 +1719,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             case '%':
             case 'mod':
             case '$mod':
-                $op = '$mod';
+                $op         = '$mod';
+                $exp_scalar = FALSE;
                 break;
 
             case 'exists':

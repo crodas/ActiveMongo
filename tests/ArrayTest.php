@@ -25,6 +25,28 @@ class ArrayTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testScalarToArray()
+    {
+        $c = new Model1;
+        $c->a = 1;
+        $c->save();
+        $c->a = array(1, 2);
+        $c->save();
+        $c->a[0] = array(1,2);
+        $c->a[1] = 3;
+        $c->save();
+
+        $id = $c->getID();
+
+
+        $c->reset();
+        $c->where('_id', $id);
+        $c->doQuery();
+
+        $this->assertEquals(array(array(1,2), 3), $c->a);
+
+    }
+
     function testArrayUnsetNull()
     {
         $arr = array(1,2,3,4);

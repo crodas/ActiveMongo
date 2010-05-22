@@ -34,6 +34,21 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertTrue(isset($indexes[1]['key']['a']));
     }
 
+    /**
+     *  @depends testBulkInserts
+     */
+    function testModQuery()
+    {
+        $c = new Model3;
+        /* int % 2 == */
+        $c->properties('int');
+        $c->where('int %', array(2, 0));
+        $this->assertLessThan($c->count(), 0);
+        foreach ($c as $r) {
+            $this->assertEquals($r->int % 2, 0);
+        }
+    }
+
     function testQuery()
     {
         $c = new Model1;
@@ -164,6 +179,18 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $this->assertTrue(TRUE);
         }
         try {
+            $c->where('c >', array(1));
+            $this->assertTrue(FALSE);
+        } catch  (ActiveMongo_Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+        try {
+            $c->where('c >>>', array(1));
+            $this->assertTrue(FALSE);
+        } catch  (ActiveMongo_Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+        try {
             $c->where('c nin', 559);
             $this->assertTrue(FALSE);
         } catch  (ActiveMongo_Exception $e) {
@@ -287,6 +314,9 @@ class QueryTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    /**
+     * @depends testBulkInserts
+     */
     function testClone()
     {
         $c = new Model1;
@@ -294,7 +324,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->save();
 
         $c->reset();
-        $this->assertLessThan($c->count(), 1);
+
         foreach ($c as $item) {
             $item_cloned = clone $item;
             $item_cloned->c = 1;
@@ -308,6 +338,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
                 $this->assertTrue(TRUE);
             }
         }
+    }
+    
+    function testToSTring()
+    {
+        $c = new Model3;
+        $c->doQuery();
+        $this->assertEquals((string)$c, (string)$c->getID());
+        $this->assertEquals((string)$c, $c->key());
     }
 
     function testDelete()
@@ -350,6 +388,15 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $this->assertTrue(TRUE);
         }
     }
+
+    function testInvalidLimits()
+    {
+        $c = new Model1;
+        $this->assertFalse($c->limit(-1, 5));
+        $this->assertFalse($c->limit(5, -1));
+        $this->assertFalse($c->limit(-1, -5));
+    }
+
 
     function testInvalidBatchInsert()
     {

@@ -13,6 +13,29 @@ class HookTest extends PHPUnit_Framework_TestCase
         $m2->update_refs($object);
     }
 
+    function super_hook($class, $param1)
+    {
+        $this->assertEquals($class, 'Model1');
+        $this->assertEquals($param1, 'param1');
+    }
+
+    function testSuperHooks()
+    {
+        ActiveMongo::addEvent('test_event', array($this, 'super_hook'));
+        $c = new Model1;
+        $c->triggerEvent('test_event', array('param1'));
+    }
+
+    function testInvalidHooks()
+    {
+        try {
+            Model1::addEvent('after_update', 'invalid_callback');
+            $this->assertTrue(FALSE);
+        } catch (Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+    }
+
     /**
      *  Testing hook, modifing on update other documents
      */
@@ -41,11 +64,14 @@ class HookTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    static function hook_test_before_validate(&$obj)
+    {
+        $obj['b'] = md5($obj['a']);
+    }
+
     function testBeforeValidate()
     {
-        Model3::addEvent("before_validate", function (&$obj) {
-            $obj['b'] = md5($obj['a']);
-        });
+        Model3::addEvent("before_validate", array($this, 'hook_test_before_validate'));
         $c = new Model3;
         $c->a = 'cesar';
         $c->int = rand(1, 50);

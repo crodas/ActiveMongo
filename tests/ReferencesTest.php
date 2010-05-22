@@ -2,8 +2,16 @@
 
 class ReferencesTest  extends PHPUnit_Framework_TestCase
 {
+    protected $query_info;
+
     public function testReferences()
     {
+        /* This query return nothing currently */
+        /* but will save a reference */
+        $query = new Model1;
+        $query->where('a', 'foobar');
+        $query->limit(2);
+        $query->sort('a DESC');
 
         $c = new Model1;
         $c->a = "foobar";
@@ -23,11 +31,9 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
         $d->next   = $c;
         /* References into sub documents */
         $d->nested = array($c, $c);
+
         /* Get Dynamic query; AKA save the query */
         /* in this case it would be a get all */
-        $query = new Model1;
-        $query->where('a', 'foobar');
-        $query->doQuery();
         $d->query  = $query->getReference(TRUE);
 
         $d->save();
@@ -62,6 +68,8 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
             $this->assertTrue($doc->nested[1] InstanceOf Model1);
             $this->assertTrue(is_array($doc->query));
             $this->assertTrue($doc->query[0] InstanceOf Model1);
+
+
 
             /* Testing Iteration in defered documents */
             /* They should fail because they are cloned */
