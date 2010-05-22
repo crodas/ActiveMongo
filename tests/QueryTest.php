@@ -67,6 +67,11 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->where('x in', array(1, 2));
         $c->where('x nin', array(4));
         $c->where('y ==', array(4));
+        $c->where('f exists');
+        $c->where('f !=', array(5,6));
+        $c->where(array("bar exists", "a exists"));
+        $c->where('xxx ==', 5);
+        $c->where('bar >=', 5);
         $c->sort('c DESC, a ASC')->limit($val4, $val5);
 
         /* perform it */
@@ -82,12 +87,15 @@ class QueryTest extends PHPUnit_Framework_TestCase
             'skip'  => $val5,
             'query' => array(
                 '$query' => array(
-                    'a' => array('$gt' => $val1),
+                    'a' => array('$gt' => $val1, '$exists' => 1),
                     'b' => array('$lt' => $val2),
                     'c' => array('$ne' => $val3),
                     'h' => new MongoRegex('/[a-f0-9]+/'),
                     'x' => array('$in' => array(1,2), '$nin' => array(4)),
                     'y' => array('$all' => array(4)),
+                    'f' => array('$exists' => 1, '$nin' => array(5,6)),
+                    'xxx' => 5,
+                    'bar' => array('$exists' => 1, '$gte' => 5),
                 ),
                 '$orderby' => array(
                     'c' => -1,
@@ -397,6 +405,15 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertFalse($c->limit(-1, -5));
     }
 
+    function testInvalidProperties()
+    {
+        $c = new Model1;
+        $this->assertFalse($c->properties(1));
+        $this->assertFalse($c->columns(1));
+        $this->assertFalse($c->columns(NULL));
+        $this->assertFalse($c->columns(TRUE));
+    }
+
 
     function testInvalidBatchInsert()
     {
@@ -471,17 +488,37 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->sort("foo");
     }
 
+    function testFindWithSingleID()
+    {
+        $d = new Model1;
+        $d->a = 5;
+        $d->save();
+
+        $c = new Model1;
+        $c->find($d->getID());
+        $this->assertEquals(1, $c->count());
+        $this->assertEquals($c->a, $d->a);
+    }
+
     function testFindAndModify()
     {
+
         $c = new Model3;
         $c->where('int <= ', 1000);
         $c->where('processing exists', FALSE);
         $c->limit(50);
+        $c->sort('int DESC');
         $c->findAndModify(array("processing" => TRUE));
 
-        $i = 0;
+        $i    = 0;
+        $last = 0; 
         foreach ($c as $d) {
             $this->assertEquals($d->processing, TRUE);
+            /* testing sort */
+            if ($last) {
+                $this->assertLessThan($last, $d->int);
+            }
+            $last = $d->int;
             $i++;
         }
         $this->assertEquals($i, 50);

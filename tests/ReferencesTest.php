@@ -9,8 +9,7 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
         /* This query return nothing currently */
         /* but will save a reference */
         $query = new Model1;
-        $query->where('a', 'foobar');
-        $query->limit(2);
+        $query->limit(2,1);
         $query->sort('a DESC');
 
         $c = new Model1;
@@ -31,6 +30,8 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
         $d->next   = $c;
         /* References into sub documents */
         $d->nested = array($c, $c);
+        /* MongoDBRef */
+        $d->mdbref = MongoDBRef::create('model1', $c->getID());
 
         /* Get Dynamic query; AKA save the query */
         /* in this case it would be a get all */
@@ -40,10 +41,40 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
 
     }
 
+    function testFindAndReferences()
+    {
+        $c = new Model1;
+        $c->a = 5;
+        $c->save();
+
+        $d = new Model1;
+        $d->a = 9;
+        $d->ref = $c;
+        $d->save();
+
+        $e = new Model1;
+        $e->ref = $c;
+        
+        foreach($e->find() as $r) {
+            $this->assertTrue(MongoDBREf::isRef($r->ref));
+            $r->doDeferencing();
+            $this->assertEquals($r->ref->a, $c->a);
+            $this->assertEquals($d->a, $r->a);
+        }
+ 
+    }
+
+
+    public function testInvalidRefernce()
+    {
+        $c = new Model2;
+        $this->assertTrue($c->getReference() === NULL);
+    }
+
     /**
      *  @depends testReferences
      */
-    public function testReferenceSave()
+    public function testDeferencing()
     {
         $d = new Model1;
         $d->where('a', 'barfoo');
@@ -62,12 +93,25 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
             /* Deference */
             $doc->doDeferencing();
 
-            /* Test */
+            /* Test deferenced values */
             $this->assertTrue($doc->next      InstanceOf Model1);
             $this->assertTrue($doc->nested[0] InstanceOf Model1);
             $this->assertTrue($doc->nested[1] InstanceOf Model1);
             $this->assertTrue(is_array($doc->query));
             $this->assertTrue($doc->query[0] InstanceOf Model1);
+
+            /* Testing mongodb refs */
+            $this->assertTrue(is_array($doc->mdbref));
+            foreach ($doc->mdbref as $property => $value) {
+                if ($property == '_id') {
+                    $this->assertEquals($value, $doc->next->getID());
+                    continue;
+                } else {
+                    $this->assertEquals($value, $doc->next->$property);
+                    continue;
+                }
+                $this->assertTrue(FALSE);
+            }
 
 
 

@@ -668,11 +668,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function find($_id = NULL)
     {
         $vars = get_document_vars($this);
+        $parent_class = __CLASS__;
         foreach ($vars as $key => $value) {
             if (!$value) {
                 unset($vars[$key]);
             }
-            $parent_class = __CLASS__;
             if ($value InstanceOf $parent_class) {
                 $this->getColumnDeference($vars, $key, $value);
                 unset($vars[$key]); /* delete old value */
@@ -1310,7 +1310,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $cursor->limit($request['limit']);
         }
         if ($request['skip'] > 0) {
-            $cursor->skip($request['limit']);
+            $cursor->skip($request['skip']);
         }
 
         $this->setCursor($cursor);
@@ -1359,13 +1359,13 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 /* Offset the current document to the right spot */
                 /* Very inefficient, never use it, instead use ActiveMongo References */
 
-                $this->_deferencingRestoreProperty($document, $ref['key'], clone $req);
+                $this->_deferencingRestoreProperty($document, $ref['key'], $obj);
 
                 /* Dirty hack, override our current document 
                  * property with the value itself, in order to
                  * avoid replace a MongoDB reference by its content
                  */
-                $this->_deferencingRestoreProperty($this->_current, $ref['key'], clone $req);
+                $this->_deferencingRestoreProperty($this->_current, $ref['key'], $obj);
 
                 /* }}} */
 
@@ -1423,8 +1423,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 $place = $ref['key'];
                 $req->rewind();
                 while ($req->getID() != $id && $req->next());
-
-                assert($req->getID() == $id);
 
                 $this->_deferencingRestoreProperty($document, $place, clone $req);
 
@@ -1660,7 +1658,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             foreach ($property_str as $property => $value) {
                 if (is_numeric($property)) {
                     $property = $value;
-                    $value    = 0;
+                    $value    = NULL;
                 }
                 $this->where($property, $value);
             }
@@ -1701,7 +1699,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                     $op = '$all';
                     $exp_scalar = FALSE;
                 } else {
-                    $op = '$eq';
+                    $op = NULL;
                 }
                 break;
 
@@ -1726,9 +1724,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             case 'exists':
             case '$exists':
                 if ($value === NULL) {
-                    $value = TRUE;
+                    $value = 1;
                 }
-                $op    = '$exists';
+                $op = '$exists';
                 break;
 
             /* regexp  */
@@ -1777,7 +1775,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         $spot = & $this->_query['query'][$column[0]];
-        if (is_array($value)) {
+        if (is_array($spot) && is_array($value)) {
             $spot[key($value)] =  current($value);
         } else {
             /* simulate AND among same properties if 
@@ -1893,10 +1891,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             "update" => array('$set' => $this->_findandmodify),
             "new" => TRUE,
         );
-        $this->_cursor_ex_value = $this->sendCMD($query);
-        if (isset($this->_query['sort'])) {
-            $query["sort"] =  $this->_query['sort'];
+        if (isset($this->_sort)) {
+            $query["sort"] =  $this->_sort;
         }
+        $this->_cursor_ex_value = $this->sendCMD($query);
 
         $this->_findandmodify_cnt++;
     }

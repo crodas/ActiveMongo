@@ -25,6 +25,15 @@ class ArrayTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testUnsetIsset()
+    {
+        $c = new Model1;
+        $c['a'] = 5;
+        $this->assertTrue(isset($c['a']));
+        unset($c['a']);
+        $this->assertFalse(isset($c['a']));
+    }
+
     function testScalarToArray()
     {
         $c = new Model1;

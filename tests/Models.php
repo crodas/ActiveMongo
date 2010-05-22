@@ -32,7 +32,11 @@ class Model2 extends ActiveMongo
     function M1_filter($obj)
     {
         if (!$obj InstanceOf MongoID) {
-            throw new ActiveMongo_FilterException("Invalid M1 value");
+            if (isset($this->no_throw)) {
+                return FALSE;
+            } else {
+                throw new ActiveMongo_FilterException("Invalid M1 value");
+            }
         }
     }
 

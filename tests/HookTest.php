@@ -19,6 +19,44 @@ class HookTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($param1, 'param1');
     }
 
+    function testFilters()
+    {
+        try {
+            $c = new Model2;
+            $c->M1 = 'foo';
+            $c->save();
+            $this->assertTrue(FALSE);
+        } catch(Exception $e) {
+            $this->assertTrue(TRUE);
+            $this->assertEquals($e->getMessage(), "Invalid M1 value");
+        }
+        try {
+            $c = new Model2;
+            $c->M1 = 'foo';
+            $c->no_throw = TRUE;
+            $c->save();
+            $this->assertTrue(FALSE);
+        } catch(Exception $e) {
+            $this->assertTrue(TRUE);
+            $this->assertNotEquals($e->getMessage(), "Invalid M1 value");
+        }
+        try {
+            /* start sub-document */
+            $d = new Model1;
+            $d->a = 5;
+            $d->save();
+            /**/
+            $c = new Model2;
+            $c->M1 = $d->getID();
+            $c->save();
+            $this->assertTrue(TRUE);
+            $d->delete();
+            $c->delete();
+        } catch(Exception $e) {
+            $this->assertTrue(FALSE);
+        }
+    }
+
     function testSuperHooks()
     {
         ActiveMongo::addEvent('test_event', array($this, 'super_hook'));
