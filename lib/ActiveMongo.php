@@ -1582,6 +1582,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
         $this->_assertNotInQuery();
 
+        $query = array($this->_query, $this->_sort, $this->_properties, $this->_skip);
+        try {
+            self::triggerEvent('before_query', array($query, &$documents));
+        } catch (ActiveMongo_Results $e) {
+            /* This need an improvement */
+            $this->setCursor($documents);    
+        }
+
         $col = $this->_getCollection();
         if (count($this->_properties) > 0) {
             $cursor = $col->find((array)$this->_query['query'], $this->_properties);
@@ -1597,6 +1605,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if ($this->_skip > 0) {
             $cursor->skip($this->_skip);
         }
+
+        self::triggerEvent('after_query', array($query, $cursor));
         
         /* Our cursor must be sent to ActiveMongo */
         $this->setCursor($cursor);
