@@ -36,26 +36,83 @@
 */
 
 /**
- *
- *
+ *  Cursor used for cached items
  */
 class CacheCursor Extends MongoCursor
 {
     protected $var;
 
+    function __construct()
+    {
+    }
+
+    function reset()
+    {
+    }
+
+    function current()
+    {
+    }
+
     function next()
     {
     }
 
+    function rewind()
+    {
+    }
+
+    function valid()
+    {
+    }
+
+    function getNext()
+    {
+    }
 }
 
-/**
- *
- *
- *
- */
-function ActiveMongoCache_QueryHook($query_document, &$resultset)
+class ActiveMongoCache
 {
+    private static $instance;
+    private $enabled;
+
+    private function __construct()
+    {
+        ActiveMongo::addEvent('before_query', array($this, 'QueryHook'));
+    }
+
+    public static function Init()
+    {
+        if (self::$instance) {
+            return;
+        }
+        self::$instance = new ActiveMongoCache;
+    }
+
+    public static function enable()
+    {
+        $this->instance->enabled = TRUE;
+    }
+
+    public static function disable()
+    {
+        $this->instance->enabled = FALSE;
+    }
+    
+    /**
+     *
+     */
+    function QueryHook($class, $query_document, &$resultset)
+    {
+        $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
+        if (!$enable) {
+            return;
+        }
+
+        $resultset = new CacheCursor;
+
+        throw new ActiveMongo_Results;
+    }
 }
 
-ActiveMongo::addEvent('before_query', 'ActiveMongoCache_QueryHook');
+ActiveMongoCache::Init();
