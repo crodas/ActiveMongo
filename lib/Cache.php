@@ -38,8 +38,24 @@
 /**
  *
  *
+ */
+class CacheCursor Extends MongoCursor
+{
+    protected $var;
+
+    function next()
+    {
+    }
+
+}
+
+/**
+ *
+ *
  *
  */
 function ActiveMongoCache_QueryHook($query_document, &$resultset)
 {
 }
+
+ActiveMongo::addEvent('before_query', 'ActiveMongoCache_QueryHook');

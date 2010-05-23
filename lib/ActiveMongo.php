@@ -1582,28 +1582,39 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
         $this->_assertNotInQuery();
 
-        $query = array($this->_query, $this->_sort, $this->_properties, $this->_skip);
+        $query = array(
+            'collection' => $this->getCollectionName(),
+            'query'      => (array)$this->_query['query'], 
+            'properties' => (array)$this->_properties,
+            'sort'       => (array)$this->_sort, 
+            'skip'       => $this->_skip,
+            'limit'      => $this->_limit
+        );
+
         try {
-            self::triggerEvent('before_query', array($query, &$documents));
+            self::triggerEvent('before_query', array(&$query, &$documents));
         } catch (ActiveMongo_Results $e) {
-            /* This need an improvement */
+            if (!$documents InstanceOf MongoCursor) {
+                throw new ActiveMongo_Exception("Invalid `before_query` output");
+            }
             $this->setCursor($documents);    
+            return $this;
         }
 
         $col = $this->_getCollection();
-        if (count($this->_properties) > 0) {
-            $cursor = $col->find((array)$this->_query['query'], $this->_properties);
+        if (count($query['properties']) > 0) {
+            $cursor = $col->find($query['query'], $query['properties']);
         } else {
-            $cursor = $col->find((array)$this->_query['query']);
+            $cursor = $col->find($query['query']);
         }
-        if (is_array($this->_sort)) {
-            $cursor->sort($this->_sort);
+        if (count($query['sort']) > 0) {
+            $cursor->sort($query['sort']);
         }
-        if ($this->_limit > 0) {
-            $cursor->limit($this->_limit);
+        if ($query['limit'] > 0) {
+            $cursor->limit($query['limit']);
         }
-        if ($this->_skip > 0) {
-            $cursor->skip($this->_skip);
+        if ($query['skip'] > 0) {
+            $cursor->skip($query['skip']);
         }
 
         self::triggerEvent('after_query', array($query, $cursor));
