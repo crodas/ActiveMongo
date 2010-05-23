@@ -71,14 +71,35 @@ class CacheCursor Extends MongoCursor
     }
 }
 
-class ActiveMongoCache
+abstract class CacheDriver
+{
+    function serialize($object)
+    {
+        return bson_encode($object);
+    }
+
+    function deserialize($string)
+    {
+        return bson_decode($string);
+    }
+
+    abstract function set($key, $object, $ttl);
+
+    abstract function delete($key);
+}
+
+final class ActiveMongo_Cache
 {
     private static $instance;
     private $enabled;
+    private $driver;
 
     private function __construct()
     {
-        ActiveMongo::addEvent('before_query', array($this, 'QueryHook'));
+        ActiveMongo::addEvent('before_query', array($this, 'QueryRead'));
+        ActiveMongo::addEvent('after_query',  array($this, 'QuerySave'));
+        ActiveMongo::addEvent('after_create', array($this, 'UpdateHook'));
+        ActiveMongo::addEvent('after_update', array($this, 'UpdateHook'));
     }
 
     public static function Init()
@@ -86,33 +107,100 @@ class ActiveMongoCache
         if (self::$instance) {
             return;
         }
-        self::$instance = new ActiveMongoCache;
+        self::$instance = new ActiveMongo_Cache;
+    }
+
+    public static function setDriver(CacheDriver $driver)
+    {
+        self::Init();
+        self::$instance->driver = $driver;
     }
 
     public static function enable()
     {
-        $this->instance->enabled = TRUE;
+        self::Init();
+        self::$instance->enabled = TRUE;
     }
 
     public static function disable()
     {
-        $this->instance->enabled = FALSE;
+        self::Init();
+        self::$instance->enabled = FALSE;
+    }
+
+    final protected function hasCache($class)
+    {
+        if (!$this->driver InstanceOf CacheDriver) {
+            return FALSE;
+        }
+        $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
+        return $enable;
     }
     
     /**
      *
      */
-    function QueryHook($class, $query_document, &$resultset)
+    function QueryRead($class, $query_document, &$resultset)
     {
-        $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
-        if (!$enable) {
+        if (!$this->hasCache($class)) {
             return;
         }
 
         $resultset = new CacheCursor;
 
-        throw new ActiveMongo_Results;
+        //throw new ActiveMongo_Results;
     }
+
+    /**
+     *
+     *
+     */
+    function QuerySave($class, $query_document)
+    {
+        if (!$this->hasCache($class)) {
+            return;
+        }
+    }
+
+    // UpdateHook($class, $document, $obj) {{{
+    /** 
+     *  Update Hook
+     *
+     *  Save or Replace an object (document) 
+     *  into the cache.
+     *
+     *  @param string $class    Class name
+     *  @param object $document Document sent to mongodb
+     *  @param object $obj      ActiveMongo Object
+     *
+     *  @return NULL
+     */
+    function UpdateHook($class, $document, $obj)
+    {
+        if (!$this->hasCache($class)) {
+            return;
+        }
+
+        if (!isset($obj['_id'])) {
+            if (!isset($document['_id'])) {
+                return; /* Weird condition */
+            }
+            $obj['_id'] = $document['_id'];
+        }
+
+        $this->driver->set((string)$obj['_id'], $this->driver->serialize($obj), 3600);
+    }
+    // }}}
+
 }
 
-ActiveMongoCache::Init();
+ActiveMongo_Cache::Init();
+
+/*
+ * Local variables:
+ * tab-width: 4
+ * c-basic-offset: 4
+ * End:
+ * vim600: sw=4 ts=4 fdm=marker
+ * vim<600: sw=4 ts=4
+ */
