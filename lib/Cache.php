@@ -83,6 +83,8 @@ abstract class CacheDriver
         return bson_decode($string);
     }
 
+    abstract function get($key, &$object);
+
     abstract function set($key, $object, $ttl);
 
     abstract function delete($key);
@@ -136,6 +138,17 @@ final class ActiveMongo_Cache
         $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
         return $enable;
     }
+
+    final protected function getQueryID($query_document)
+    {
+        /* TODO: Peform some sort of sorting */
+        /* to treat queries with same parameters but */
+        /* different order equal */
+
+        $id = $this->driver->serialize($query_document);
+
+        return sha1($id);
+    }
     
     /**
      *
@@ -146,20 +159,67 @@ final class ActiveMongo_Cache
             return;
         }
 
-        $resultset = new CacheCursor;
+        $query_id = $this->getQueryID($query_document);
+        
+        if (!$this->driver->get($query_id, $query_result)) {
+            return; /* Not cached yet */
+        }
 
-        //throw new ActiveMongo_Results;
+        if (!is_array($query_result)) {
+            /* This is unexpected, always double check */
+            return;
+        }
+
+
+        $resultset = new CacheCursor;
+        $toquery   = array();
+        $result    = array();
+
+        foreach ($query_result as $i=>$id) {
+            $doc = NULL;
+            if (!$this->driver->get((string)$id, $doc)) {
+                $toquery[$i] = $id;
+            }
+            $result[$i] = $doc;
+        }
+
+        if (count($toquery) > 0) {
+            $db = new $class;
+            $db->where(array_values($toquery));
+            foreach ($db as $doc) {
+                foreach ($toquery as $i => $id) {
+                    if ($id == $doc['_id']) {
+                        break;
+                    }
+                }
+                $result[$i] = $doc;
+            }
+        }
+
+        return;
+
+        throw new ActiveMongo_Results;
     }
 
     /**
      *
      *
      */
-    function QuerySave($class, $query_document)
+    function QuerySave($class, $query_document, $cursor)
     {
         if (!$this->hasCache($class)) {
             return;
         }
+
+        $query_id = $this->getQueryID($query_document);
+        $ids      = array();
+
+        foreach ($cursor as $document) {
+            $ids[] = $document['_id'];
+            $this->driver->set((string)$document['_id'], $this->driver->serialize($document), 3600);
+        }
+
+        $this->driver->set($query_id, $ids, 3600);
     }
 
     // UpdateHook($class, $document, $obj) {{{

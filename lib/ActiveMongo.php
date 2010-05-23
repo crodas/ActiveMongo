@@ -620,6 +620,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final protected function setCursor(MongoCursor $obj)
     {
         $this->_cursor = $obj;
+        $obj->reset();
         $this->setResult($obj->getNext());
     }
     // }}}

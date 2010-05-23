@@ -12,6 +12,17 @@ class CacheDriverMem extends CacheDriver
 {
     private $mem;
 
+    function get($key, &$document)
+    {
+        if (!isset($this->mem[$key])) {
+            return FALSE;
+        }
+
+        $document = $this->mem[$key];
+
+        return TRUE;
+    }
+
     function set($key, $content, $ttl)
     {
         $this->mem[$key] = $content;
