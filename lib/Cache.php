@@ -41,29 +41,51 @@
 class CacheCursor Extends MongoCursor
 {
     protected $var;
+    protected $size;
+    protected $pos;
 
     function __construct()
     {
     }
 
+    function setResultArray(Array $array)
+    {
+        $this->var = $array;
+        $this->pos = 0;
+    }
+
     function reset()
     {
+        $this->pos = -1;
     }
 
     function current()
     {
+        if ($this->pos-1 >= 0) {
+            foreach ($this->var[$this->pos-1] as $id => $val) {
+                unset($this->$id);
+            }
+        }
+        foreach ($this->var[$this->pos] as $id => $val) {
+            $this->$id = $val;
+        }
     }
 
     function next()
     {
-    }
-
-    function rewind()
-    {
+        $this->pos++;
+        $this->current();
     }
 
     function valid()
     {
+        return $this->pos < $this->size;
+    }
+
+    function rewind()
+    {
+        $this->reset();
+        $this->next();
     }
 
     function getNext()
@@ -171,9 +193,8 @@ final class ActiveMongo_Cache
         }
 
 
-        $resultset = new CacheCursor;
-        $toquery   = array();
-        $result    = array();
+        $toquery = array();
+        $result  = array();
 
         foreach ($query_result as $i=>$id) {
             $doc = NULL;
@@ -185,7 +206,7 @@ final class ActiveMongo_Cache
 
         if (count($toquery) > 0) {
             $db = new $class;
-            $db->where(array_values($toquery));
+            $db->where('_id IN', array_values($toquery));
             foreach ($db as $doc) {
                 foreach ($toquery as $i => $id) {
                     if ($id == $doc['_id']) {
@@ -196,7 +217,8 @@ final class ActiveMongo_Cache
             }
         }
 
-        return;
+        $resultset = new CacheCursor;
+        $resultset->setResultArray($result);
 
         throw new ActiveMongo_Results;
     }

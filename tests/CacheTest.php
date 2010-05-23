@@ -35,8 +35,6 @@ class CacheDriverMem extends CacheDriver
 }
 
 ActiveMongo_Cache::setDriver(new CacheDriverMem);
-ActiveMongo_Cache::enable();
-
 
 class CacheTest extends PHPUnit_Framework_TestCase
 {
@@ -50,6 +48,12 @@ class CacheTest extends PHPUnit_Framework_TestCase
 
         $c->where('_id', $id);
         $c->doQuery();
+        $this->assertFalse($c->servedFromCache());
+
+        $c->reset();
+        $c->where('_id', $id);
+        $c->doQuery();
+        $this->assertTrue($c->servedFromCache());
     }
 
 }

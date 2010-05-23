@@ -160,6 +160,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private $_findandmodify;
 
     /* {{{ Silly but useful query abstraction  */
+    private $_cached  = FALSE; 
     private $_query   = NULL;
     private $_sort    = NULL;
     private $_limit   = 0;
@@ -1564,6 +1565,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    function servedFromCache()
+    {
+        return $this->_cached;
+    }
+
+
     // doQuery() {{{
     /**
      *  Build the current request and send it to MongoDB.
@@ -1592,12 +1599,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             'limit'      => $this->_limit
         );
 
+        $this->_cached = FALSE;
         try {
             self::triggerEvent('before_query', array(&$query, &$documents));
         } catch (ActiveMongo_Results $e) {
             if (!$documents InstanceOf MongoCursor) {
                 throw new ActiveMongo_Exception("Invalid `before_query` output");
             }
+            $this->_cached = TRUE;
             $this->setCursor($documents);    
             return $this;
         }
