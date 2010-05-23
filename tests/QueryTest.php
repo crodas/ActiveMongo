@@ -3,6 +3,24 @@
 class QueryTest extends PHPUnit_Framework_TestCase
 {
 
+    function testConnect()
+    {
+        ActiveMongo::connect(DB, "localhost");
+        try {
+            Dummy::drop();
+        } catch (Exception $e) {}
+        try {
+            Model1::drop();
+        } catch (Exception $e) {}
+        try {
+            Model2::drop();
+        } catch (Exception $e) {}
+        try {
+            Model3::drop();
+        } catch (Exception $e) {}
+        $this->assertTrue(TRUE);
+    }
+
     function testBulkInserts()
     {
         try { 

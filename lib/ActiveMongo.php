@@ -1193,8 +1193,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         );
 
         if ($dynamic) {
-            if (!$this->_cursor InstanceOf MongoCursor) {
+            if (!$this->_cursor InstanceOf MongoCursor && $this->_cursor_ex === NULL) {
                 $this->doQuery();
+            }
+
+            if (!$this->_cursor InstanceOf MongoCursor) {
+                throw new ActiveMongo_Exception("Only MongoDB native cursor could have dynamic references");
             }
 
             $cursor = $this->_cursor;

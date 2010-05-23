@@ -71,6 +71,22 @@ class ReferencesTest  extends PHPUnit_Framework_TestCase
         $this->assertTrue($c->getReference() === NULL);
     }
 
+    public function testReferencesWithFindAndReferences()
+    {
+        try {
+            $c = new Model1;
+            $c->where('int <= ', 1000);
+            $c->where('processing exists', FALSE);
+            $c->limit(50);
+            $c->sort('int DESC');
+            $c->findAndModify(array("processing" => TRUE));
+            $invalid_ref = $c->getReference(TRUE);
+            $this->assertTrue(FALSE);
+        } catch (ActiveMongo_Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+    }
+
     /**
      *  @depends testReferences
      */
