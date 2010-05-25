@@ -14,23 +14,23 @@ class CacheDriverMem extends CacheDriver
 
     function get($key, &$document)
     {
-        if (!isset($this->mem[$key])) {
-            return FALSE;
+        if (isset($this->mem[$key])) {
+            $document = $this->deserialize($this->mem[$key]);
+            return TRUE;
         }
-
-        $document = $this->mem[$key];
-
-        return TRUE;
+        return FALSE;
     }
 
-    function set($key, $content, $ttl)
+    function set($key, $document, $ttl)
     {
-        $this->mem[$key] = $content;
+        $this->mem[$key] = $this->serialize($document);
     }
 
-    function delete($key)
+    function delete(Array $keys)
     {
-        unset($this->mem[$key]);
+        foreach ($keys as $key) {
+            unset($this->mem[$key]);
+        }
     }
 }
 
@@ -50,10 +50,12 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $c->doQuery();
         $this->assertFalse($c->servedFromCache());
 
-        $c->reset();
-        $c->where('_id', $id);
-        $c->doQuery();
-        $this->assertTrue($c->servedFromCache());
+        $d = new CacheableModel;
+        $d->where('_id', $id);
+        $d->doQuery();
+
+        $this->assertTrue($d->servedFromCache());
+        $this->assertEquals($c->foo, $d->foo);
     }
 
 }

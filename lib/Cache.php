@@ -50,8 +50,9 @@ class CacheCursor Extends MongoCursor
 
     function setResultArray(Array $array)
     {
-        $this->var = $array;
-        $this->pos = 0;
+        $this->var  = array_values($array);
+        $this->size = count($array);
+        $this->pos  = 0;
     }
 
     function reset()
@@ -61,18 +62,21 @@ class CacheCursor Extends MongoCursor
 
     function current()
     {
-        if ($this->pos-1 >= 0) {
-            foreach ($this->var[$this->pos-1] as $id => $val) {
-                unset($this->$id);
-            }
-        }
         foreach ($this->var[$this->pos] as $id => $val) {
             $this->$id = $val;
         }
+        return $this->var[$this->pos];
+        return $this;
     }
 
     function next()
     {
+        $nodel = array('var' => 1, 'pos' => 1, 'size' => 1);
+        foreach (array_keys(get_object_vars($this)) as $key) {
+            if (!isset($nodel[$key])) {
+                unset($this->$key);
+            }
+        }
         $this->pos++;
         $this->current();
     }
@@ -90,26 +94,69 @@ class CacheCursor Extends MongoCursor
 
     function getNext()
     {
+        $this->rewind();
+        return $this->var[$this->pos];
+    }
+
+    function getID()
+    {
+        return $this->_id;
     }
 }
 
 abstract class CacheDriver
 {
+
+    // Serialization {{{
+    /**
+     *  serialize -- by default with BSON
+     *
+     *  @param object $object
+     *
+     *  @return string
+     */
     function serialize($object)
     {
         return bson_encode($object);
     }
 
+    /**
+     *  deserialize -- by default with BSON
+     *
+     *  @param string $string
+     *
+     *  @return object
+     */
     function deserialize($string)
     {
         return bson_decode($string);
     }
+    // }}}
 
     abstract function get($key, &$object);
 
-    abstract function set($key, $object, $ttl);
+    abstract function set($key, $document, $ttl);
 
-    abstract function delete($key);
+    function getMulti(Array $keys, Array &$object)
+    {
+        foreach ($keys as $key) {
+            if ($this->get($key, $object[$key]) === FALSE) {
+                $object[$key] = FALSE;
+            }
+        }
+    }
+
+    function setMulti(Array $object, Array $ttl)
+    {
+        foreach ($object as $id => $value) {
+            if (!isset($ttl[$id])) {
+                $ttl[$id] = 3600;
+            }
+            $this->set($id, $value, $ttl[$id]);
+        }
+    }
+
+    abstract function delete(Array $key);
 }
 
 final class ActiveMongo_Cache
@@ -182,45 +229,47 @@ final class ActiveMongo_Cache
         }
 
         $query_id = $this->getQueryID($query_document);
-        
-        if (!$this->driver->get($query_id, $query_result)) {
-            return; /* Not cached yet */
-        }
 
-        if (!is_array($query_result)) {
-            /* This is unexpected, always double check */
+        if ($this->driver->get($query_id, $query_result) === FALSE) {
             return;
         }
 
+        if (!is_array($query_result)) {
+            return;
+        }
 
         $toquery = array();
         $result  = array();
 
-        foreach ($query_result as $i=>$id) {
-            $doc = NULL;
-            if (!$this->driver->get((string)$id, $doc)) {
-                $toquery[$i] = $id;
+        $cache_ids = array_combine(array_keys($query_result), array_keys($query_result));
+        $this->driver->getMulti($cache_ids, $result);
+
+        foreach ($result as $id => $doc) {
+            if (!is_array($doc)) {
+                $toquery[] = $id;
             }
-            $result[$i] = $doc;
         }
 
         if (count($toquery) > 0) {
             $db = new $class;
             $db->where('_id IN', array_values($toquery));
             foreach ($db as $doc) {
-                foreach ($toquery as $i => $id) {
+                foreach ($toquery as $id) {
                     if ($id == $doc['_id']) {
                         break;
                     }
                 }
-                $result[$i] = $doc;
+                $result[$id] = $doc;
             }
         }
 
         $resultset = new CacheCursor;
         $resultset->setResultArray($result);
 
-        throw new ActiveMongo_Results;
+        /* Return FALSE to prevent the execution of 
+         * any hook similar hook
+         */
+        return FALSE;
     }
 
     /**
@@ -235,12 +284,16 @@ final class ActiveMongo_Cache
 
         $query_id = $this->getQueryID($query_document);
         $ids      = array();
+        $ttl      = array();
+        $docs     = array();
 
-        foreach ($cursor as $document) {
-            $ids[] = $document['_id'];
-            $this->driver->set((string)$document['_id'], $this->driver->serialize($document), 3600);
+        foreach ($cursor as $id=>$document) {
+            $ids[$id]  = $document['_id'];
+            $docs[$id] = $this->driver->Serialize($document); 
+            $ttl[$id]  = 3600;
         }
 
+        $this->driver->setMulti($docs, $ttl);
         $this->driver->set($query_id, $ids, 3600);
     }
 
@@ -270,7 +323,7 @@ final class ActiveMongo_Cache
             $obj['_id'] = $document['_id'];
         }
 
-        $this->driver->set((string)$obj['_id'], $this->driver->serialize($obj), 3600);
+        $this->driver->set((string)$obj['_id'], $obj, 3600);
     }
     // }}}
 

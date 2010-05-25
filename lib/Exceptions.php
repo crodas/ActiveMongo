@@ -54,18 +54,6 @@ class ActiveMongo_FilterException extends ActiveMongo_Exception
 }
 // }}}
 
-// Class Results Exception {{{
-/**
- *  Results Exception
- *  
- *  This is exception could be thrown by a before_query
- *  hook, providing the result for the current request, preventing
- *  to ActiveMongo to ask to MongoDB.
- */
-class ActiveMongo_Results extends ActiveMongo_Exception
-{
-}
-//}}}
 
 /*
  * Local variables:
