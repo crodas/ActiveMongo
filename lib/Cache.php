@@ -60,30 +60,27 @@ class CacheCursor Extends MongoCursor
         $this->pos = -1;
     }
 
+    function key()
+    {
+        return (string)$this->var[$this->pos]['_id'];
+    }
+
     function current()
     {
-        foreach ($this->var[$this->pos] as $id => $val) {
-            $this->$id = $val;
+        if (!$this->valid()) {
+            return array();
         }
         return $this->var[$this->pos];
-        return $this;
     }
 
     function next()
     {
-        $nodel = array('var' => 1, 'pos' => 1, 'size' => 1);
-        foreach (array_keys(get_object_vars($this)) as $key) {
-            if (!isset($nodel[$key])) {
-                unset($this->$key);
-            }
-        }
-        $this->pos++;
-        $this->current();
+        ++$this->pos;
     }
 
     function valid()
     {
-        return $this->pos < $this->size;
+        return isset($this->var[$this->pos]);
     }
 
     function rewind()
@@ -96,6 +93,11 @@ class CacheCursor Extends MongoCursor
     {
         $this->rewind();
         return $this->var[$this->pos];
+    }
+
+    function count()
+    {
+        return count($this->var);
     }
 
     function getID()
@@ -146,9 +148,9 @@ abstract class CacheDriver
         }
     }
 
-    function setMulti(Array $object, Array $ttl)
+    function setMulti(Array $objects, Array $ttl)
     {
-        foreach ($object as $id => $value) {
+        foreach ($objects as $id => $value) {
             if (!isset($ttl[$id])) {
                 $ttl[$id] = 3600;
             }
@@ -234,7 +236,7 @@ final class ActiveMongo_Cache
             return;
         }
 
-        if (!is_array($query_result)) {
+        if (!is_array($query_result) || count($query_result) == 0) {
             return;
         }
 
@@ -289,7 +291,7 @@ final class ActiveMongo_Cache
 
         foreach ($cursor as $id=>$document) {
             $ids[$id]  = $document['_id'];
-            $docs[$id] = $this->driver->Serialize($document); 
+            $docs[$id] = $document;
             $ttl[$id]  = 3600;
         }
 
