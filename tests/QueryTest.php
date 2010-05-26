@@ -138,6 +138,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             'fields' => array(
                 'a' => 1,
                 'b' => 1,
+                '_id' => 1, /* from now on _id is included by default */
             )
         );
 
@@ -198,6 +199,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             'fields' => array(
                 'a' => 1,
                 'b' => 1,
+                '_id' => 1,
             )
         );
 

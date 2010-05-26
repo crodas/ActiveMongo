@@ -1689,6 +1689,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             unset($props[$id]);
         }
 
+
+        /* _id should always be included */
+        $props['_id'] = 1;
+
         $this->_properties = $props;
 
         return $this;
