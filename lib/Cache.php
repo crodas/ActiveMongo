@@ -216,6 +216,23 @@ abstract class CacheDriver
 
 }
 
+/**
+ *  CacheDriver
+ *
+ *  Plug-in which adds cache capabilities to all
+ *  ActiveMongo objects. The cache could be enabled
+ *  for all objects (by default disabled), or for specified
+ *  objects which has the static property cacheable to TRUE.
+ *
+ *  At query time is also posible to disable the cache, passing
+ *  false to doQuery, also this method will override the cache
+ *  values if the query can use cache.
+ *
+ *  @author César D. Rodas <crodas@php.net>
+ *  @license BSD License
+ *  @package ActiveMongo
+ *  @version 1.0
+ */
 final class ActiveMongo_Cache
 {
     private static $instance;
@@ -242,6 +259,13 @@ final class ActiveMongo_Cache
     }
     // }}}
 
+    // Init() {{{
+    /**
+     *  Initialize the Cache system, this is done
+     *  automatically.
+     *
+     *  @return void
+     */
     public static function Init()
     {
         if (self::$instance) {
@@ -249,26 +273,62 @@ final class ActiveMongo_Cache
         }
         self::$instance = new ActiveMongo_Cache;
     }
+    // }}}
 
+    // setDriver(CacheDriver $driver) {{{
+    /**
+     *  Set the CacheDriver object that will be used
+     *  to cache object, must be a sub-class of CacheDriver
+     *
+     *  @param CacheDriver $driver
+     *
+     *  @return void
+     */
     public static function setDriver(CacheDriver $driver)
     {
         self::Init();
-        self::$instance->driver = $driver;
+        self::$instance->driver = &$driver;
     }
+    // }}}
 
+    // enable() {{{
+    /**
+     *  Enable the cache for all classes, even those
+     *  which does not has the state property $cacheable
+     *
+     *  @return void
+     */
     public static function enable()
     {
         self::Init();
         self::$instance->enabled = TRUE;
     }
+    // }}}
 
+    // disable() {{{
+    /**
+     *  Disable the cache for all classes, except those
+     *  which has the state property $cacheable =TRUE
+     *
+     *  @return void
+     */
     public static function disable()
     {
         self::Init();
         self::$instance->enabled = FALSE;
     }
+    // }}}
 
-    final protected function hasCache($class)
+    // canUseCache($class) {{{
+    /**
+     *  Return TRUE is the current query
+     *  can use a cache.
+     *
+     *  @param string $class Class name
+     *  
+     *  @return bool 
+     */
+    final protected function canUseCache($class)
     {
         if (!$this->driver InstanceOf CacheDriver) {
             return FALSE;
@@ -276,7 +336,18 @@ final class ActiveMongo_Cache
         $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
         return $enable;
     }
+    // }}}
 
+    // getQueryID(Array $query_docuement) {{{
+    /**
+     *  Get a ID from a given query, right now it is very
+     *  simple, it serialize the query document, it should
+     *  be improved to easily delete old queries
+     *
+     *  @param array $query_document
+     *
+     *  @return string
+     */
     final protected function getQueryID($query_document)
     {
         /* TODO: Peform some sort of sorting */
@@ -287,15 +358,62 @@ final class ActiveMongo_Cache
 
         return sha1($id);
     }
-    
+    // }}}
+
+    // deleteObject($id) {{{
     /**
+     *  Delete an object from the cache by its $id
+     *
+     *  @return void
+     */
+    final static function deleteObject($id)
+    {
+        self::Init();
+        $self = self::$instance;
+        $self->driver->delete(array((string)$id));
+    }
+    // }}}
+
+    // mixed getObject($id) {{{
+    /**
+     *  Return an object from the cache, if it doesn't
+     *  exists it would return FALSE
+     *
+     *  @param mixed $id
+     *  @return mixed $object
+     *
+     */
+    final static function getObject($id)
+    {
+        self::Init();
+        $self = self::$instance;
+        if (!$self->driver) {
+            return FALSE;
+        }
+        $object = FALSE;
+        $self->driver->get((string)$id, $object);
+
+        return $object;
+    }
+    // }}}
+    
+    // QueryRead($class, $query_document, &$resultset, $use_cache=TRUE){{{
+    /**
+     *  Return the resultset for the current query from the cache if the
+     *  cache is enabled, if the current query can be cacheable and if 
+     *  it already exists on cache.
+     *
+     *  @param string $class            Class name
+     *  @param array  $query_document   Query sent to mongodb
+     *  @param array  &$resultset       The resultset
+     *  @param bool   $use_cache        True if cache can be used
      *
      *
-     *
+     *  @return mixed FALSE or NULL
      */
     function QueryRead($class, $query_document, &$resultset, $use_cache=TRUE)
     {
-        if (!$this->hasCache($class) || !$use_cache) {
+        if (!$this->canUseCache($class) || !$use_cache) {
             return;
         }
 
@@ -341,6 +459,7 @@ final class ActiveMongo_Cache
          */
         return FALSE;
     }
+    // }}}
 
     // QuerySave($class, $query_document, $cursor) {{{
     /**
@@ -354,7 +473,7 @@ final class ActiveMongo_Cache
      */
     function QuerySave($class, $query_document, $cursor)
     {
-        if (!$this->hasCache($class)) {
+        if (!$this->canUseCache($class)) {
             return;
         }
 
@@ -389,7 +508,7 @@ final class ActiveMongo_Cache
      */
     function UpdateDocumentHook($class, $document, $obj)
     {
-        if (!$this->hasCache($class)) {
+        if (!$this->canUseCache($class)) {
             return;
         }
 

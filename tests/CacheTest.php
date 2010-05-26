@@ -106,6 +106,8 @@ class CacheTest extends PHPUnit_Framework_TestCase
                 $this->assertTrue(isset($result->$value));
             }
         }
+
+        return $var;
     }
 
     /**
@@ -131,6 +133,57 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($d->servedFromCache());
         $this->assertEquals($c->prop, $d->prop);
 
+        return $id;
+    }
 
+    /**
+     *  @depends testCacheMultiple
+     */
+    function testUpdateQueryCache($vars)
+    {
+        /* assert the query is cached */
+        $query = new CacheableModel;
+        $query->where('var.var_name IN', $vars);
+        $query->doQuery();
+        $this->assertTrue($query->servedFromCache());
+        $this->assertEquals(count($query), count($vars));
+
+        /* add a new element */
+        $new = new CacheableModel;
+        $new->var['var_name'] = 'xxx';
+        $new->xxx = TRUE;
+        $new->save();
+
+        /* query to mongodb, without cache */
+        $query = new CacheableModel;
+        $query->where('var.var_name IN', $vars);
+        $query->doQuery(FALSE);
+        $this->assertFalse($query->servedFromCache());
+        $this->assertEquals(count($query), count($vars)+1);
+
+        /* check if the cache was overrided */
+        $query = new CacheableModel;
+        $query->where('var.var_name IN', $vars);
+        $query->doQuery();
+        $this->assertTrue($query->servedFromCache());
+        $this->assertEquals(count($query), count($vars)+1);
+    }
+
+    /**
+     *  @depends testUpdateCache
+     */
+    function testFetchFromCache($id)
+    {
+        /* Test if one object is missing in the cache
+         * is loaded properly by activemongo cache
+         */
+        ActiveMongo_Cache::deleteObject($id);
+        $this->assertFalse(ActiveMongo_Cache::getObject($id));
+        $d = new CacheableModel;
+        $d->where('_id', $id);
+        $d->doQuery();
+        $this->assertTrue($d->servedFromCache());
+        $this->assertEquals('new value', $d->prop);
+        $this->assertTrue(is_array(ActiveMongo_Cache::getObject($id)));
     }
 }
