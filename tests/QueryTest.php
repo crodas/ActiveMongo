@@ -55,6 +55,21 @@ class QueryTest extends PHPUnit_Framework_TestCase
     /**
      *  @depends testBulkInserts
      */
+    function testReset()
+    {
+        $c = new Model3;
+        $c->doQuery();
+
+        $this->assertTrue(isset($c->int));
+        $this->assertTrue(isset($c['int']));
+        $c->reset();
+        $this->assertFalse(isset($c->int));
+        $this->assertFalse(isset($c['int']));
+    }
+
+    /**
+     *  @depends testBulkInserts
+     */
     function testModQuery()
     {
         $c = new Model3;

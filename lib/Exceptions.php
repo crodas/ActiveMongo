@@ -54,6 +54,7 @@ class ActiveMongo_FilterException extends ActiveMongo_Exception
 }
 // }}}
 
+
 /*
  * Local variables:
  * tab-width: 4

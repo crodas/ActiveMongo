@@ -160,6 +160,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private $_findandmodify;
 
     /* {{{ Silly but useful query abstraction  */
+    private $_cached  = FALSE; 
     private $_query   = NULL;
     private $_sort    = NULL;
     private $_limit   = 0;
@@ -548,7 +549,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             if (count($$event_type) > 0) {
                 $params = "{$event_type}_params";
                 foreach ($$event_type as $fnc) {
-                    call_user_func_array($fnc, $$params);
+                    if (call_user_func_array($fnc, $$params) === FALSE) {
+                        return;
+                    }
                 }
             }
         }
@@ -565,11 +568,13 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'before_validate':
         case 'before_delete':
         case 'before_drop':
+        case 'before_query':
         case 'after_create':
         case 'after_update':
         case 'after_validate':
         case 'after_delete':
         case 'after_drop':
+        case 'after_query':
             $fnc    = array($this, $event);
             $params = "events_params";
             if (is_callable($fnc)) {
@@ -620,6 +625,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final protected function setCursor(MongoCursor $obj)
     {
         $this->_cursor = $obj;
+        $obj->reset();
         $this->setResult($obj->getNext());
     }
     // }}}
@@ -792,7 +798,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $this->setResult(array());
             return $result;
         } else {
-            $criteria = (array) $this->_query['query'];
+            $criteria = (array) $this->_query;
 
             /* remove */
             $this->triggerEvent('before_delete', array($document));
@@ -830,7 +836,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $this->_assertNotInQuery();
 
-        $criteria = (array) $this->_query['query'];
+        $criteria = (array) $this->_query;
         $options  = array('multiple' => TRUE, 'safe' => $safe);
 
         /* update */
@@ -1007,6 +1013,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // }}}
 
     // ITERATOR {{{
+
+    // array getArray() {{{
+    /**
+     *  Return the current document as an array 
+     *  instead of a ActiveMongo object
+     *
+     *  @return Array
+     */
+    final function getArray()
+    {
+        return get_document_vars($this);
+    }
+    // }}}
 
     // void reset() {{{
     /**
@@ -1567,13 +1586,27 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // bool servedFromCache() {{{
+    /**
+     *  Return True if the current result
+     *  was provided by a before_query hook (aka cache)
+     *  or False if it was retrieved from MongoDB
+     *
+     *  @return bool
+     */
+    final function servedFromCache()
+    {
+        return $this->_cached;
+    }
+    // }}}
+
     // doQuery() {{{
     /**
      *  Build the current request and send it to MongoDB.
      *
      *  @return this
      */
-    final function doQuery()
+    final function doQuery($use_cache=TRUE)
     {
         if ($this->_cursor_ex) {
             switch ($this->_cursor_ex) {
@@ -1586,21 +1619,42 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
         $this->_assertNotInQuery();
 
+        $query = array(
+            'collection' => $this->getCollectionName(),
+            'query'      => (array)$this->_query, 
+            'properties' => (array)$this->_properties,
+            'sort'       => (array)$this->_sort, 
+            'skip'       => $this->_skip,
+            'limit'      => $this->_limit
+        );
+
+        $this->_cached = FALSE;
+
+        self::triggerEvent('before_query', array(&$query, &$documents, $use_cache));
+
+        if ($documents InstanceOf MongoCursor && $use_cache) {
+            $this->_cached = TRUE;
+            $this->setCursor($documents);    
+            return $this;
+        }
+
         $col = $this->_getCollection();
-        if (count($this->_properties) > 0) {
-            $cursor = $col->find((array)$this->_query['query'], $this->_properties);
+        if (count($query['properties']) > 0) {
+            $cursor = $col->find($query['query'], $query['properties']);
         } else {
-            $cursor = $col->find((array)$this->_query['query']);
+            $cursor = $col->find($query['query']);
         }
-        if (is_array($this->_sort)) {
-            $cursor->sort($this->_sort);
+        if (count($query['sort']) > 0) {
+            $cursor->sort($query['sort']);
         }
-        if ($this->_limit > 0) {
-            $cursor->limit($this->_limit);
+        if ($query['limit'] > 0) {
+            $cursor->limit($query['limit']);
         }
-        if ($this->_skip > 0) {
-            $cursor->skip($this->_skip);
+        if ($query['skip'] > 0) {
+            $cursor->skip($query['skip']);
         }
+
+        self::triggerEvent('after_query', array($query, $cursor));
         
         /* Our cursor must be sent to ActiveMongo */
         $this->setCursor($cursor);
@@ -1778,7 +1832,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $value = array('$in' => $value);
         }
 
-        $spot = & $this->_query['query'][$column[0]];
+        $spot = & $this->_query[$column[0]];
         if (is_array($spot) && is_array($value)) {
             $spot[key($value)] =  current($value);
         } else {
@@ -1887,7 +1941,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     private function _execFindAndModify()
     {
-        $query = (array)$this->_query['query'];
+        $query = (array)$this->_query;
 
         $query = array(
             "findandmodify" => $this->getCollectionName(),
