@@ -137,12 +137,6 @@ abstract class CacheDriver
      */
     function serialize($object)
     {
-        if (count(debug_backtrace()) > 200) {
-            foreach(debug_backtrace() as $trace) {
-                var_dump(array(@$trace['function'], @$trace['file'], @$trace['line']));
-            }
-            die();
-        }
         return bson_encode($object);
     }
 
