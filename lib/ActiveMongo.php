@@ -1014,6 +1014,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // ITERATOR {{{
 
+    // array getArray() {{{
+    /**
+     *  Return the current document as an array 
+     *  instead of a ActiveMongo object
+     *
+     *  @return Array
+     */
+    final function getArray()
+    {
+        return get_document_vars($this);
+    }
+    // }}}
+
     // void reset() {{{
     /**
      *  Reset our Object, delete the current cursor if any, and reset
@@ -1569,11 +1582,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
-    function servedFromCache()
+    // bool servedFromCache() {{{
+    /**
+     *  Return True if the current result
+     *  was provided by a before_query hook (aka cache)
+     *  or False if it was retrieved from MongoDB
+     *
+     *  @return bool
+     */
+    final function servedFromCache()
     {
         return $this->_cached;
     }
-
+    // }}}
 
     // doQuery() {{{
     /**
@@ -1605,7 +1626,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
         $this->_cached = FALSE;
 
-        self::triggerEvent('before_query', array(&$query, &$documents));
+        self::triggerEvent('before_query', array(&$query, &$documents, $use_cache));
 
         if ($documents InstanceOf MongoCursor && $use_cache) {
             $this->_cached = TRUE;

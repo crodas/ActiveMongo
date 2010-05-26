@@ -35,20 +35,30 @@
   +---------------------------------------------------------------------------------+
 */
 
+// class CursorCache  {{{
 /**
  *  Cursor used for cached items
+ *
+ *  Hack for ActiveMongo, fake MongoCursor
+ *  subclass that iterates in a given array.
+ *
+ *  This avoid re-write the main iteration 
+ *  support at MongoDB, nevertheless this might 
+ *  be improved in the future.
+ *  
+ *  @author César D. Rodas <crodas@php.net>
+ *  @license BSD License
+ *  @package ActiveMongo
+ *  @version 1.0
+ *  
  */
-class CacheCursor Extends MongoCursor
+final class CacheCursor Extends MongoCursor
 {
     protected $var;
     protected $size;
     protected $pos;
 
-    function __construct()
-    {
-    }
-
-    function setResultArray(Array $array)
+    function __construct(Array $array)
     {
         $this->var  = array_values($array);
         $this->size = count($array);
@@ -100,12 +110,20 @@ class CacheCursor Extends MongoCursor
         return count($this->var);
     }
 
-    function getID()
-    {
-        return $this->_id;
-    }
 }
+// }}}
 
+/**
+ *  CacheDriver
+ *
+ *  Cache base class, each driver must inherit 
+ *  this class, and must implement each method.
+ *
+ *  @author César D. Rodas <crodas@php.net>
+ *  @license BSD License
+ *  @package ActiveMongo
+ *  @version 1.0
+ */
 abstract class CacheDriver
 {
 
@@ -119,6 +137,12 @@ abstract class CacheDriver
      */
     function serialize($object)
     {
+        if (count(debug_backtrace()) > 200) {
+            foreach(debug_backtrace() as $trace) {
+                var_dump(array(@$trace['function'], @$trace['file'], @$trace['line']));
+            }
+            die();
+        }
         return bson_encode($object);
     }
 
@@ -135,19 +159,44 @@ abstract class CacheDriver
     }
     // }}}
 
-    abstract function get($key, &$object);
-
-    abstract function set($key, $document, $ttl);
-
-    function getMulti(Array $keys, Array &$object)
+    // void getMulti (Array $keys, Array &$objects) {{{
+    /**
+     *  Simple but inneficient implementation of 
+     *  the getMulti. It retrieve multiple objects
+     *  from the cache that matchs the array of keys.
+     *
+     *  If the cache supports multiple
+     *  get (as memcached does) it should be overrided.
+     *
+     *
+     *  @param array $keys 
+     *  @param array &$objects
+     *
+     */
+    function getMulti(Array $keys, Array &$objects)
     {
         foreach ($keys as $key) {
-            if ($this->get($key, $object[$key]) === FALSE) {
-                $object[$key] = FALSE;
+            if ($this->get($key, $objects[$key]) === FALSE) {
+                $objects[$key] = FALSE;
             }
         }
     }
+    // }}}
 
+    // setMulti(Array $objects, Array $ttl) {{{
+    /**
+     *  Simple but inneficient implementation of the 
+     *  setMulti, it basically push a set of objects
+     *  to the cache at once.
+     *
+     *  If the cache driver support this operation,
+     *  this method should be overrided.
+     *
+     *  @param Array $objects
+     *  @param Array $ttl
+     *
+     *  @retun voie
+     */
     function setMulti(Array $objects, Array $ttl)
     {
         foreach ($objects as $id => $value) {
@@ -157,8 +206,14 @@ abstract class CacheDriver
             $this->set($id, $value, $ttl[$id]);
         }
     }
+    // }}}
+
+    abstract function get($key, &$object);
+
+    abstract function set($key, $document, $ttl);
 
     abstract function delete(Array $key);
+
 }
 
 final class ActiveMongo_Cache
@@ -167,13 +222,25 @@ final class ActiveMongo_Cache
     private $enabled;
     private $driver;
 
+    //  __construct() {{{
+    /**
+     *  Class contructor
+     *
+     *  This is class is private, so it can be contructed
+     *  only using the singleton interfaz.
+     *
+     *  This method also setup all needed hooks
+     *
+     *  @return void
+     */
     private function __construct()
     {
         ActiveMongo::addEvent('before_query', array($this, 'QueryRead'));
         ActiveMongo::addEvent('after_query',  array($this, 'QuerySave'));
-        ActiveMongo::addEvent('after_create', array($this, 'UpdateHook'));
-        ActiveMongo::addEvent('after_update', array($this, 'UpdateHook'));
+        ActiveMongo::addEvent('after_create', array($this, 'UpdateDocumentHook'));
+        ActiveMongo::addEvent('after_update', array($this, 'UpdateDocumentHook'));
     }
+    // }}}
 
     public static function Init()
     {
@@ -223,10 +290,12 @@ final class ActiveMongo_Cache
     
     /**
      *
+     *
+     *
      */
-    function QueryRead($class, $query_document, &$resultset)
+    function QueryRead($class, $query_document, &$resultset, $use_cache=TRUE)
     {
-        if (!$this->hasCache($class)) {
+        if (!$this->hasCache($class) || !$use_cache) {
             return;
         }
 
@@ -248,25 +317,24 @@ final class ActiveMongo_Cache
 
         foreach ($result as $id => $doc) {
             if (!is_array($doc)) {
-                $toquery[] = $id;
+                $toquery[$id] = $query_result[$id];
             }
         }
 
         if (count($toquery) > 0) {
             $db = new $class;
             $db->where('_id IN', array_values($toquery));
+            $db->doQuery(FALSE);
+            $dresult = array();
             foreach ($db as $doc) {
-                foreach ($toquery as $id) {
-                    if ($id == $doc['_id']) {
-                        break;
-                    }
-                }
-                $result[$id] = $doc;
+                $dresult[$doc->key()] = $doc->getArray();
             }
+            $this->driver->setMulti($dresult, array());
+            $result = array_merge($result, $dresult);
         }
 
-        $resultset = new CacheCursor;
-        $resultset->setResultArray($result);
+
+        $resultset = new CacheCursor($result);
 
         /* Return FALSE to prevent the execution of 
          * any hook similar hook
@@ -274,9 +342,15 @@ final class ActiveMongo_Cache
         return FALSE;
     }
 
+    // QuerySave($class, $query_document, $cursor) {{{
     /**
+     *  Save the current resultset into the cache
      *
-     *
+     *  @param string       $class
+     *  @param array        $query_document
+     *  @param MongoCursor  $cursor
+     *  
+     *  @return void
      */
     function QuerySave($class, $query_document, $cursor)
     {
@@ -298,8 +372,9 @@ final class ActiveMongo_Cache
         $this->driver->setMulti($docs, $ttl);
         $this->driver->set($query_id, $ids, 3600);
     }
+    // }}}
 
-    // UpdateHook($class, $document, $obj) {{{
+    // UpdateDocumentHook($class, $document, $obj) {{{
     /** 
      *  Update Hook
      *
@@ -312,7 +387,7 @@ final class ActiveMongo_Cache
      *
      *  @return NULL
      */
-    function UpdateHook($class, $document, $obj)
+    function UpdateDocumentHook($class, $document, $obj)
     {
         if (!$this->hasCache($class)) {
             return;
@@ -330,8 +405,6 @@ final class ActiveMongo_Cache
     // }}}
 
 }
-
-ActiveMongo_Cache::Init();
 
 /*
  * Local variables:

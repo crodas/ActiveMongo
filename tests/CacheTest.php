@@ -34,18 +34,21 @@ class CacheDriverMem extends CacheDriver
     }
 }
 
-ActiveMongo_Cache::setDriver(new CacheDriverMem);
 
 class CacheTest extends PHPUnit_Framework_TestCase
 {
-    function __construct()
-    { 
+    function testInit()
+    {
         try { 
             CacheableModel::drop();
         } Catch (Exception $e) {
         }
+        ActiveMongo_Cache::setDriver(new CacheDriverMem);
     }
 
+    /**
+     *  @depends testInit
+     */
     function testCacheSimple()
     {
         $c = new CacheableModel;
