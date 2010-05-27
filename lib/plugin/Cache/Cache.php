@@ -353,7 +353,7 @@ final class ActiveMongo_Cache
      */
     function cacheFailed()
     {
-        /* something went wront, disable the cache */
+        /* something went wrong, disable the cache */
         /* temporarily */
         $this->driver_enabled = FALSE;
     }

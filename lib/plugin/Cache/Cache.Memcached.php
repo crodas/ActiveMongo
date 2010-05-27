@@ -69,6 +69,21 @@ final class MemcachedDriver extends CacheDriver
         $this->memcached->flush();
     }
 
+    function getMulti(Array $keys, Array &$object)
+    {
+        $object = $this->memcached->getMulti($keys);
+        $nkeys  = array_keys($object);
+        foreach (array_diff($keys, $nkeys) as $k) {
+            $object[$k] = FALSE;
+        }
+        return TRUE;
+    }
+
+    function setMulti(Array $objects, Array $ttl)
+    {
+        $this->memcached->setMulti($objects);
+    }
+
     function get($key, &$object)
     {
         $object = $this->memcached->get($key);
