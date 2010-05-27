@@ -1,6 +1,6 @@
 <?php
 
-require "../lib/Cache.php";
+require "../lib/plugin/Cache/Cache.php";
     
 
 class CacheableModel extends ActiveMongo
@@ -11,6 +11,23 @@ class CacheableModel extends ActiveMongo
 class CacheDriverMem extends CacheDriver
 {
     private $mem;
+
+    function flush()
+    {
+        $this->mem = array();
+    }
+
+    function config($name, $value)
+    {
+        switch ($name) {
+        case 'return':
+            return $value;
+        case 'true':
+            return TRUE;
+        case 'false':
+            return FALSE;
+        }
+    }
 
     function get($key, &$document)
     {
@@ -44,6 +61,16 @@ class CacheTest extends PHPUnit_Framework_TestCase
         } Catch (Exception $e) {
         }
         ActiveMongo_Cache::setDriver(new CacheDriverMem);
+    }
+
+    /**
+     *  @depends testInit
+     */
+    function testCacheDriverConfig()
+    {
+        $this->assertTrue(ActiveMongo_Cache::config('true', NULL));
+        $this->assertFalse(ActiveMongo_Cache::config('false', NULL));
+        $this->assertEquals(ActiveMongo_Cache::config('return', 'foo'), 'foo');
     }
 
     /**
@@ -185,5 +212,26 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $this->assertTrue($d->servedFromCache());
         $this->assertEquals('new value', $d->prop);
         $this->assertTrue(is_array(ActiveMongo_Cache::getObject($id)));
+    }
+
+    function testDrivers()
+    {
+        $drivers = glob("../lib/plugin/Cache/*.php");
+        foreach ($drivers as $drive) {
+            if (substr($drive,-9) == 'Cache.php') {
+                continue;
+            }
+            require $drive;
+            if (!ActiveMongo_Cache::isDriverActived()) {
+                continue;
+            }
+            ActiveMongo_Cache::flushCache();
+            CacheableModel::drop();
+            $id   = $this->testCacheSimple();
+            $vars = $this->testCacheMultiple();
+            $this->testUpdateCache($id);
+            $this->testFetchFromCache($id);
+            $this->testUpdateQueryCache($vars);
+        }
     }
 }

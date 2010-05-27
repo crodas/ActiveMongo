@@ -202,6 +202,29 @@ abstract class CacheDriver
     }
     // }}}
 
+    // config($variable, $value) {{{
+    /** 
+     *  configuration for the driver
+     *
+     *  @param string $variable
+     *  @param mixed   $value
+     *
+     *  @return NULL
+     */
+    function config($variable, $value) 
+    {
+    }
+    // }}}
+
+    // isEnabled() {{{
+    function isEnabled()
+    {
+        return TRUE;
+    }
+    // }}}
+
+    abstract function flush();
+
     abstract function get($key, &$object);
 
     abstract function set($key, $document, $ttl);
@@ -232,6 +255,7 @@ final class ActiveMongo_Cache
     private static $instance;
     private $enabled;
     private $driver;
+    private $driver_enabled;
 
     //  __construct() {{{
     /**
@@ -281,7 +305,9 @@ final class ActiveMongo_Cache
     public static function setDriver(CacheDriver $driver)
     {
         self::Init();
-        self::$instance->driver = &$driver;
+        self::$instance->driver         = &$driver;
+        self::$instance->driver_enabled = FALSE;
+
     }
     // }}}
 
@@ -299,6 +325,40 @@ final class ActiveMongo_Cache
     }
     // }}}
 
+    // config($name, $value) {{{
+    /**
+     *  Pass a configuration to the cache driver
+     *
+     *  @return mixed
+     */
+    public static function config($name, $value)
+    {
+        self::Init();
+        $self = self::$instance;
+        if (!$self->driver) {
+            return FALSE;
+        }
+        return $self->driver->config($name, $value);
+    }
+    // }}}
+
+    // cacheFailed() {{{
+    /**
+     *  Tell to ActiveMongo_Cache that the driver cache failed
+     *  (it throwed some exception). Currently it is disabled
+     *  temporarily, in the future it might have a threshold 
+     *  of error and then disable permanently for the request.
+     *
+     *  @return void
+     */
+    function cacheFailed()
+    {
+        /* something went wront, disable the cache */
+        /* temporarily */
+        $this->driver_enabled = FALSE;
+    }
+    // }}}
+
     // disable() {{{
     /**
      *  Disable the cache for all classes, except those
@@ -310,6 +370,48 @@ final class ActiveMongo_Cache
     {
         self::Init();
         self::$instance->enabled = FALSE;
+    }
+    // }}}
+
+    // isDriverActived() {{{
+    /**
+     *  Check if it has a cache driver and 
+     *  if it is valid.
+     *
+     *  @return bool
+     */
+    static function isDriverActived()
+    {
+        self::Init();
+        $self = self::$instance;
+        if (!$self->driver InstanceOf CacheDriver) {
+            return FALSE;
+        }
+        if (!$self->driver_enabled && !$self->driver->isEnabled()) {
+            return FALSE;
+        }
+        $self->_driver_enabled = TRUE;
+        return TRUE;
+    }
+    // }}}
+
+    // flushCache() {{{
+    /**
+     *  Delete all the cache content, I can't figureout
+     *  how this can be useful, but I'm using for testing :-)
+     *  
+     */
+    static function flushCache()
+    {
+        self::Init();
+        $self = self::$instance;
+        if (!$self->driver InstanceOf CacheDriver) {
+            return FALSE;
+        }
+        if (!$self->driver_enabled && !$self->driver->isEnabled()) {
+            return FALSE;
+        }
+        $self->driver->flush();
     }
     // }}}
 
@@ -326,6 +428,13 @@ final class ActiveMongo_Cache
     {
         if (!$this->driver InstanceOf CacheDriver) {
             return FALSE;
+        }
+        if (!$this->driver_enabled) {
+            $enabled = $this->driver->isEnabled();
+            if (!$enabled) {
+                return FALSE;
+            }
+            $this->driver_enabled = TRUE;
         }
         $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
         return $enable;
@@ -410,43 +519,50 @@ final class ActiveMongo_Cache
         if (!$this->canUseCache($class) || !$use_cache) {
             return;
         }
+        try {
 
-        $query_id = $this->getQueryID($query_document);
-
-        if ($this->driver->get($query_id, $query_result) === FALSE) {
-            return;
-        }
-
-        if (!is_array($query_result) || count($query_result) == 0) {
-            return;
-        }
-
-        $toquery = array();
-        $result  = array();
-
-        $cache_ids = array_combine(array_keys($query_result), array_keys($query_result));
-        $this->driver->getMulti($cache_ids, $result);
-
-        foreach ($result as $id => $doc) {
-            if (!is_array($doc)) {
-                $toquery[$id] = $query_result[$id];
+            $query_id = $this->getQueryID($query_document);
+            if ($this->driver->get($query_id, $query_result) === FALSE) {
+                return;
             }
-        }
 
-        if (count($toquery) > 0) {
-            $db = new $class;
-            $db->where('_id IN', array_values($toquery));
-            $db->doQuery(FALSE);
-            $dresult = array();
-            foreach ($db as $doc) {
-                $dresult[$doc->key()] = $doc->getArray();
+            if (!is_array($query_result) || count($query_result) == 0) {
+                return;
             }
-            $this->driver->setMulti($dresult, array());
-            $result = array_merge($result, $dresult);
+
+            $toquery = array();
+            $result  = array();
+
+            $cache_ids = array_combine(array_keys($query_result), array_keys($query_result));
+     
+            $this->driver->getMulti($cache_ids, $result);
+
+            foreach ($result as $id => $doc) {
+                if (!is_array($doc)) {
+                    $toquery[$id] = $query_result[$id];
+                }
+            }
+
+            if (count($toquery) > 0) {
+                $db = new $class;
+                $db->where('_id IN', array_values($toquery));
+                $db->doQuery(FALSE);
+                $dresult = array();
+                foreach ($db as $doc) {
+                    $dresult[$doc->key()] = $doc->getArray();
+                }
+                $this->driver->setMulti($dresult, array());
+                $result = array_merge($result, $dresult);
+            }
+
+
+            $resultset = new CacheCursor($result);
+
+        } catch (Exception $e) {
+            /* If any goes wrong it shouldn't interupt the current query */
+            $this->cacheFailed();
+            $resultset = NULL;
         }
-
-
-        $resultset = new CacheCursor($result);
 
         /* Return FALSE to prevent the execution of 
          * any hook similar hook
@@ -476,14 +592,18 @@ final class ActiveMongo_Cache
         $ttl      = array();
         $docs     = array();
 
-        foreach ($cursor as $id=>$document) {
-            $ids[$id]  = $document['_id'];
-            $docs[$id] = $document;
-            $ttl[$id]  = 3600;
+        try {
+            foreach ($cursor as $id=>$document) {
+                $ids[$id]  = $document['_id'];
+                $docs[$id] = $document;
+                $ttl[$id]  = 3600;
+            }
+            $this->driver->setMulti($docs, $ttl);
+            $this->driver->set($query_id, $ids, 3600);
+        } catch (Exception $e) {
+            $this->cacheFailed();
         }
 
-        $this->driver->setMulti($docs, $ttl);
-        $this->driver->set($query_id, $ids, 3600);
     }
     // }}}
 
@@ -513,7 +633,11 @@ final class ActiveMongo_Cache
             $obj['_id'] = $document['_id'];
         }
 
-        $this->driver->set((string)$obj['_id'], $obj, 3600);
+        try {
+            $this->driver->set((string)$obj['_id'], $obj, 3600);
+        } catch (Exception $e) {
+            $this->cacheFailed();
+        }
     }
     // }}}
 
