@@ -560,7 +560,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
          * as methods, if they exists
          */
         if (!isset($this)) {
-            return;
+            $class = get_called_class();
+        } else {
+            $class = $this;
         }
         switch ($event) {
         case 'before_create':
@@ -575,7 +577,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'after_delete':
         case 'after_drop':
         case 'after_query':
-            $fnc    = array($this, $event);
+            $fnc    = array($class, $event);
             $params = "events_params";
             if (is_callable($fnc)) {
                 call_user_func_array($fnc, $$params);

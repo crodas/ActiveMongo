@@ -13,6 +13,10 @@ class Model1 extends ActiveMongo
         'a'
     );
 
+    function before_create()
+    {
+    }
+
     function setup()
     {
         $this->addIndex(array('a' => 1));
