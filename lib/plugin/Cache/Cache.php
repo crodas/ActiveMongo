@@ -436,7 +436,7 @@ final class ActiveMongo_Cache
             }
             $this->driver_enabled = TRUE;
         }
-        $enable = isset($class::$cacheable) ? $class::$cacheable : $this->enabled;
+        $enable = isset_static_variable($class, 'cacheable') ? get_static_variable($class, 'cacheable') : $this->enabled;
         return $enable;
     }
     // }}}

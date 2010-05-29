@@ -35,97 +35,65 @@
   +---------------------------------------------------------------------------------+
 */
 
+
 /**
- *  Default validators
+ *  get_called_class()
  *
+ *  Get_called_class() for php5.2
  *
+ *  @return string
  */
-class ActiveMongo_Validators
+function get_called_class()
 {
-
-    final private static function _hook($action, $method)
-    {
-        ActiveMongo::addEvent($action, array(__CLASS__, $method));
-    }
-
-    final public static function init() 
-    {
-        self::_hook("before_validate_creation", "presence_of_creation");
-        self::_hook("before_validate_update", "presence_of_update");
-        self::_hook("before_validate", "length_of");
-    }
-
-    // validates_length_of {{{
-    final static function length_of($class, $obj)
-    {
-        $validates = array();
-
-        if (isset_static_variable($class, 'validates_size_of')) {
-            $validates = get_static_variable($class, 'validates_size_of');
-        } else if (isset_static_variable($class, 'validates_length_of')) {
-            $validates = get_static_variables($class, 'validates_length_of');
-        }
-
-        foreach ($validates as $property) {
-            $name = $property[0];
-
-            if (isset($obj[$name])) {
-                $prop = $obj[$name];
+    static $cache = array();
+    $class = '';
+    foreach (debug_backtrace() as $bt) {
+        if (isset($bt['class']) && $bt['type'] == '::') {
+            extract($bt);
+            if (!isset($cache["{$file}_{$line}"])) {
+                $lines = file($file);
+                $expr  = '/([a-z0-9\_]+)::'.$function.'/i';
+                $line  = $lines[$line-1];
+                preg_match_all($expr, $line, $matches);
+                if (!$matches[1][0]){
+                    throw new Exception("Unexpected internal error");
+                }
+                $cache["{$file}_{$line}"] = $matches[1][0];
             }
-
-            if (isset($obj['$set'][$name])) {
-                $prop = $obj['$set'][$name];
-            }
-
-            if (isset($prop)) {
-                if (isset($property['min']) && strlen($prop) < $property['min']) {
-                    throw new ActiveMongo_FilterException("{$name} length is too short");
-                }
-                if (isset($property['is']) && strlen($prop) != $property['is']) {
-                    throw new ActiveMongo_FilterException("{$name} length is different than expected");
-                }
-                if (isset($property['max']) && strlen($prop) > $property['max']) {
-                    throw new ActiveMongo_FilterException("{$name} length is too large");
-                }
+            if ($cache["{$file}_{$line}"] != 'self') {
+                $class = $cache["{$file}_{$line}"];
+                break;
             }
         }
     }
-    // }}}
-
-    // validates_presence_of {{{
-    final static function presence_of_creation($class, $obj)
-    {
-        if (isset_static_variable($class, 'validates_presence_of')) {
-            foreach ((Array)get_static_variable($class, 'validates_presence_of') as $property) {
-                if (!isset($obj[$property])) {
-                    throw new ActiveMongo_FilterException("Missing required property {$property}"); 
-                }
-            }
-        }
-    }
-
-    final static function presence_of_update($class, $obj)
-    {
-        if (isset_static_variable($class, 'validates_presence_of')) {
-            foreach ((Array)get_static_variable($class,'validates_presence_of') as $property) {
-                if (isset($obj['$unset'][$property])) {
-                    throw new ActiveMongo_FilterException("Cannot delete required property {$property}"); 
-                }
-            }
-        }
-    }
-    // }}}
-
+    return $class;
 }
 
-// Register validators
-ActiveMongo_Validators::init();
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
+/**
+ *  Return TRUE or FALSE whether a static variable
+ *  is declared or not
+ *
+ *  @param $class    Class name
+ *  @param $variable Variable name
+ *  
+ *  @return bool
  */
+function isset_static_variable($class, $variable)
+{
+    $vars = get_class_vars($class);
+    return isset($vars[$variable]);
+}
+
+/**
+ *  Return the content of a static variable
+ *
+ *  @param $class    Class name
+ *  @param $variable Variable name
+ *  
+ *  @return mixed
+ */
+function get_static_variable($class, $variable)
+{
+    $vars = get_class_vars($class);
+    return $vars[$variable];
+}
