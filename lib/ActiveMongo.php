@@ -54,6 +54,12 @@ function get_document_vars($obj, $include_id=TRUE)
 }
 // }}}
 
+if (version_compare(PHP_VERSION, '5.3') < 0) {
+    require dirname(__FILE__)."/Objects_compat.php";
+} else {
+    require dirname(__FILE__)."/Objects.php";
+}
+
 /**
  *  ActiveMongo
  *
