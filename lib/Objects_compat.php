@@ -56,7 +56,7 @@ function get_called_class()
                 $line  = $lines[$line-1];
                 preg_match_all($expr, $line, $matches);
                 if (!$matches[1][0]){
-                    throw new Exception("Unexected internal error");
+                    throw new Exception("Unexpected internal error");
                 }
                 $cache["{$file}_{$line}"] = $matches[1][0];
             }
