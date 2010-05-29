@@ -34,6 +34,9 @@
   | Authors: César Rodas <crodas@php.net>                                           |
   +---------------------------------------------------------------------------------+
 */
+if (!class_exists('Memcached')) {
+    return FALSE;
+}
 
 final class MemcachedDriver extends CacheDriver
 {
