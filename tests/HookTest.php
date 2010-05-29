@@ -26,7 +26,7 @@ class HookTest extends PHPUnit_Framework_TestCase
             $c->M1 = 'foo';
             $c->save();
             $this->assertTrue(FALSE);
-        } catch(Exception $e) {
+        } catch(ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
             $this->assertEquals($e->getMessage(), "Invalid M1 value");
         }
@@ -36,7 +36,7 @@ class HookTest extends PHPUnit_Framework_TestCase
             $c->no_throw = TRUE;
             $c->save();
             $this->assertTrue(FALSE);
-        } catch(Exception $e) {
+        } catch(ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
             $this->assertNotEquals($e->getMessage(), "Invalid M1 value");
         }
@@ -52,7 +52,7 @@ class HookTest extends PHPUnit_Framework_TestCase
             $this->assertTrue(TRUE);
             $d->delete();
             $c->delete();
-        } catch(Exception $e) {
+        } catch(ActiveMongo_Exception $e) {
             $this->assertTrue(FALSE);
         }
     }
@@ -69,7 +69,7 @@ class HookTest extends PHPUnit_Framework_TestCase
         try {
             Model1::addEvent('after_update', 'invalid_callback');
             $this->assertTrue(FALSE);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
     }

@@ -1,5 +1,11 @@
 #!/bin/bash -x
+PHP52=~/bin/php-5.2/bin/php
+OPTPHP52="-dextension=mongo.so"
+PHP53=$(which php)
+OPTPHP53=""
+PHPUNIT=$(which phpunit)
 
-phpunit ActiveMongoSuite.php
-~/bin/php-5.2/bin/php -dextension=mongo.so $(which phpunit) ActiveMongoSuite.php 
+$PHP53 $PHPOPT53 $PHPUNIT ActiveMongoSuite.php 
+sleep 1
+$PHP52 $OPTPHP52 $PHPUNIT ActiveMongoSuite.php
 

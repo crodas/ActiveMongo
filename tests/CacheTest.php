@@ -58,7 +58,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
     {
         try { 
             CacheableModel::drop();
-        } Catch (Exception $e) {
+        } Catch (ActiveMongo_Exception $e) {
         }
         ActiveMongo_Cache::setDriver(new CacheDriverMem);
     }

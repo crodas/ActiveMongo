@@ -8,16 +8,16 @@ class QueryTest extends PHPUnit_Framework_TestCase
         ActiveMongo::connect(DB, "localhost");
         try {
             Dummy::drop();
-        } catch (Exception $e) {}
+        } catch (ActiveMongo_Exception $e) {}
         try {
             Model1::drop();
-        } catch (Exception $e) {}
+        } catch (ActiveMongo_Exception $e) {}
         try {
             Model2::drop();
-        } catch (Exception $e) {}
+        } catch (ActiveMongo_Exception $e) {}
         try {
             Model3::drop();
-        } catch (Exception $e) {}
+        } catch (ActiveMongo_Exception $e) {}
         $this->assertTrue(TRUE);
     }
 
@@ -25,7 +25,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         try { 
             Model3::drop();
-        } catch (Exception $e) {}
+        } catch (ActiveMongo_Exception $e) {}
         $data = array();
 
         /* Valid data */
@@ -368,6 +368,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         $c->reset();
 
+        /* object with no results can't be cloned */
+        try {
+            $foo = clone $c;
+            $this->AssertTrue(FALSE);
+        } catch (ActiveMongo_Exception $e) {
+            $this->AssertTrue(TRUE);
+        }
+
         foreach ($c as $item) {
             $item_cloned = clone $item;
             $item_cloned->c = 1;
@@ -377,10 +385,25 @@ class QueryTest extends PHPUnit_Framework_TestCase
                 foreach ($item_cloned as $nitem) {
                     $this->assertTrue(FALSE);
                 }
-            } catch (Exception $e) {
+            } catch (ActiveMongo_Exception $e) {
                 $this->assertTrue(TRUE);
             }
         }
+
+        /* cloned object can't be reused */
+        try {
+            $item_cloned->reset();
+            $this->AssertTrue(FALSE);
+        } catch (ActiveMongo_Exception $e) {
+            $this->AssertTrue(TRUE);
+        }
+        try {
+            $item_cloned->where('a IN', array(1));
+            $this->AssertTrue(FALSE);
+        } catch (ActiveMongo_Exception $e) {
+            $this->AssertTrue(TRUE);
+        }
+
     }
     
     function testToSTring()
@@ -427,7 +450,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertTrue(Dummy::drop());
         try {
             $this->assertFalse(Dummy::drop());
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
     }
@@ -460,7 +483,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             /* Invalid call */
             ActiveMongo::BatchInsert($documents);
             $this->assertTrue(False);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
 
@@ -489,7 +512,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         try {
             $c->where("invalid field property", 3);
             $this->assertTrue(FALSE);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
 
@@ -498,7 +521,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
                 "b" => 1,
             ), TRUE);
             $this->assertTrue(FALSE);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
 
@@ -506,14 +529,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
         try {
             $c->sort(" , , ");
             $this->assertTrue(FALSE);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
 
         try {
             $c->sort("c DESC, field BAR");
             $this->assertTrue(FALSE);
-        } catch (Exception $e) {
+        } catch (ActiveMongo_Exception $e) {
             $this->assertTrue(TRUE);
         }
 

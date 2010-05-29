@@ -520,7 +520,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final static function addEvent($action, $callback)
     {
         if (!is_callable($callback)) {
-            throw new Exception("Invalid callback");
+            throw new ActiveMongo_Exception("Invalid callback");
         }
 
         $class = get_called_class();
@@ -1044,6 +1044,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function reset()
     {
+        if ($this->_cloned) {
+            throw new ActiveMongo_Exception("Cloned objects can't be reseted");
+        }
         $this->_properties = NULL;
         $this->_cursor     = NULL;
         $this->_cursor_ex  = NULL;
@@ -1148,6 +1151,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function rewind()
     {
+        if ($this->_cloned) {
+            throw new ActiveMongo_Exception("Cloned objects can't iterate");
+        }
         if (!$this->_cursor_ex) {
             /* rely on MongoDB cursor */
             if (!$this->_cursor InstanceOf MongoCursor) {
@@ -1537,6 +1543,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function __clone()
     {
+        if (!$this->_current) {
+            throw new ActiveMongo_Exception("Empty objects can't be cloned");
+        }
         unset($this->_cursor);
         $this->_cloned = TRUE;
     }
@@ -1588,7 +1597,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final private function _assertNotInQuery()
     {
-        if ($this->_cursor InstanceOf MongoCursor || $this->_cursor_ex != NULL) {
+        if ($this->_cloned || $this->_cursor InstanceOf MongoCursor || $this->_cursor_ex != NULL) {
             throw new ActiveMongo_Exception("You cannot modify the query, please reset the object");
         }
     }
@@ -1888,6 +1897,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             case 2:
                 break;
             default:
+                throw new ActiveMongo_Exception("Don't know how to parse {$sort_part_str}");
+            }
+
+            /* Columns name can't be empty */
+            if (!trim($sort_part[0])) {
                 throw new ActiveMongo_Exception("Don't know how to parse {$sort_part_str}");
             }
 
