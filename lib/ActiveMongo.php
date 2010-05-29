@@ -933,6 +933,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                         self::triggerEvent('before_create', array(&$doc));
                         self::triggerEvent('before_validate', array(&$doc, $doc));
                         self::triggerEvent('before_validate_creation', array(&$doc, $doc));
+                        $documents[$id] = $doc;
                         $valid = TRUE;
                     } catch (Exception $e) {}
                 }
