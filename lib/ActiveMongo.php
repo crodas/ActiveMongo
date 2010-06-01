@@ -967,6 +967,17 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             'background' => 1,
         );
 
+        if (!is_array($columns)) {
+            $columns = array($columns => 1);
+        }
+
+        foreach ($columns as $id => $name) {
+            if (is_numeric($id)) {
+                unset($columns[$id]);
+                $columns[$name] = 1;
+            }
+        }
+
        foreach ($default_options as $option => $value) {
             if (!isset($options[$option])) {
                 $options[$option] = $value;

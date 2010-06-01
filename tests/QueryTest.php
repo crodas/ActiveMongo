@@ -48,8 +48,16 @@ class QueryTest extends PHPUnit_Framework_TestCase
     function testInstall()
     {
         ActiveMongo::install();
-        $indexes = Model1::getIndexes();
-        $this->assertTrue(isset($indexes[1]['key']['a']));
+        $index = Model1::getIndexes();
+        $this->assertTrue(isset($index[1]['key']['b']));
+        $this->assertTrue(isset($index[2]['key']['a']));
+        $this->assertEquals($index[1]['key']['b'], 1);
+        $this->assertEquals($index[2]['key']['a'], -1);
+        $this->asserTEquals(count($index), 3);
+        $index = Model2::getIndexes();
+        $this->assertTrue(isset($index[1]['key']['M1']));
+        $this->assertEquals($index[1]['key']['M1'], 1);
+        $this->asserTEquals(count($index), 2);
     }
 
     /**

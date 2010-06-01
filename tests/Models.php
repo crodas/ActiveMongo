@@ -19,7 +19,8 @@ class Model1 extends ActiveMongo
 
     function setup()
     {
-        $this->addIndex(array('a' => 1));
+        $this->addIndex('b');
+        $this->addIndex(array('a' => -1));
     }
 
 }
@@ -42,6 +43,11 @@ class Model2 extends ActiveMongo
                 throw new ActiveMongo_FilterException("Invalid M1 value");
             }
         }
+    }
+
+    function setup()
+    {
+        $this->addIndex(array('M1'));
     }
 
     function update_refs($m1)
