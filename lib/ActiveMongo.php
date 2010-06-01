@@ -538,12 +538,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // }}}
 
     // triggerEvent(string $event, Array $events_params) {{{
-    final function triggerEvent($event, Array $events_params = array())
+    final function triggerEvent($event, Array $events_params = array(), $context=NULL)
     {
-        if (!isset($this)) {
-            $class = get_called_class();
+        if (!$context){
+            if (!isset($this)) {
+                $class = get_called_class();
+                $obj   = $class;
+            } else {
+                $class = get_class($this);
+                $obj   = $this;
+            }
         } else {
-            $class = get_class($this);
+            $class = $context;
+            $obj   = $context;
         }
         $events  = & self::$_events[$class][$event];
         $sevents = & self::$_super_events[$event];
@@ -562,14 +569,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
         }
 
-        /* Some natives events are allowed to be called 
-         * as methods, if they exists
-         */
-        if (!isset($this)) {
-            $class = get_called_class();
-        } else {
-            $class = $this;
-        }
         switch ($event) {
         case 'before_create':
         case 'before_update':
@@ -583,7 +582,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'after_delete':
         case 'after_drop':
         case 'after_query':
-            $fnc    = array($class, $event);
+            $fnc    = array($obj, $event);
             $params = "events_params";
             if (is_callable($fnc)) {
                 call_user_func_array($fnc, $$params);
@@ -921,18 +920,21 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final public static function batchInsert(Array $documents, $safe=TRUE, $on_error_continue=TRUE)
     {
-        if (__CLASS__ == get_called_class()) {
+        $context = get_called_class();
+
+        if (__CLASS__ == $context) {
             throw new ActiveMongo_Exception("Invalid batchInsert usage");
         }
+
         
         if ($safe) {
             foreach ($documents as $id => $doc) {
                 $valid = FALSE;
                 if (is_array($doc)) {
                     try {
-                        self::triggerEvent('before_create', array(&$doc));
-                        self::triggerEvent('before_validate', array(&$doc, $doc));
-                        self::triggerEvent('before_validate_creation', array(&$doc, $doc));
+                        self::triggerEvent('before_create', array(&$doc), $context);
+                        self::triggerEvent('before_validate', array(&$doc, $doc), $context);
+                        self::triggerEvent('before_validate_creation', array(&$doc, $doc), $context);
                         $documents[$id] = $doc;
                         $valid = TRUE;
                     } catch (Exception $e) {}
