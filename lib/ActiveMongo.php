@@ -88,6 +88,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     private static $_dbs;
     /**
+     *  Current namespace
+     *
+     *  @type string
+     */
+    private static $_namespace = NULL;
+    /**
      *  Current collections objects
      *      
      *  @type array
@@ -191,6 +197,25 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // }}}
 
     // GET CONNECTION CONFIG {{{
+
+    final static function setNameSpace($namespace)
+    {
+        self::$_namespace = $namespace;
+    }
+
+    final public function collectionName()
+    {
+        $collection = '';
+        if (self::$_namespace) { 
+            $collection = self::$_namespace.".";
+        }
+        if (isset($this)) {
+            $collection .= $this->getCollectionName();
+        } else {
+            $collection .= self::getCollectionName();
+        }
+        return $collection;
+    }
 
     // string getCollectionName() {{{
     /**
@@ -318,9 +343,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final protected function _getCollection()
     {
         if (isset($this)) {
-            $colName = $this->getCollectionName();
+            $colName = $this->CollectionName();
         } else {
-            $colName = self::getCollectionName();
+            $colName = self::CollectionName();
         }
         if (!isset(self::$_collections[$colName])) {
             self::$_collections[$colName] = self::_getConnection()->selectCollection($colName);
@@ -1233,7 +1258,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         $document = array(
-            '$ref'  => $this->getCollectionName(), 
+            '$ref'  => $this->CollectionName(), 
             '$id'   => $this->getID(),
             '$db'   => $this->getDatabaseName(),
             'class' => get_class($this),
@@ -1651,7 +1676,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $this->_assertNotInQuery();
 
         $query = array(
-            'collection' => $this->getCollectionName(),
+            'collection' => $this->CollectionName(),
             'query'      => (array)$this->_query, 
             'properties' => (array)$this->_properties,
             'sort'       => (array)$this->_sort, 
@@ -1984,7 +2009,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $query = (array)$this->_query;
 
         $query = array(
-            "findandmodify" => $this->getCollectionName(),
+            "findandmodify" => $this->CollectionName(),
             "query" => $query,
             "update" => array('$set' => $this->_findandmodify),
             "new" => TRUE,

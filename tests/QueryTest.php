@@ -45,6 +45,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($c->count(), 5000);
     }
 
+    function testNamespace()
+    {
+        $c = new Model1;
+        ActiveMongo::setNamespace('testing');
+        $this->assertEquals($c->collectionName(), 'testing.model1');
+        ActiveMongo::setNamespace(NULL);
+    }
+
     function testInstall()
     {
         ActiveMongo::install();
