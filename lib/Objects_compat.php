@@ -48,19 +48,16 @@ function get_called_class()
     static $cache = array();
     $class = '';
     foreach (debug_backtrace() as $bt) {
-        if (isset($bt['class']) && $bt['type'] == '::') {
+        if (isset($bt['class']) && ($bt['type'] == '->' ||$bt['type'] == '::') && isset($bt['file'])) {
             extract($bt);
             if (!isset($cache["{$file}_{$line}"])) {
                 $lines = file($file);
                 $expr  = '/([a-z0-9\_]+)::'.$function.'/i';
                 $line  = $lines[$line-1];
                 preg_match_all($expr, $line, $matches);
-                if (!$matches[1][0]){
-                    throw new Exception("Unexpected internal error");
-                }
                 $cache["{$file}_{$line}"] = $matches[1][0];
             }
-            if ($cache["{$file}_{$line}"] != 'self') {
+            if ($cache["{$file}_{$line}"] != 'self' && !empty($cache["{$file}_{$line}"])) {
                 $class = $cache["{$file}_{$line}"];
                 break;
             }

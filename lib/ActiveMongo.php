@@ -94,6 +94,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     private static $_namespace = NULL;
     /**
+     *  Specific namespaces for each class
+     *
+     *  @type string
+     */
+    private static $_namespaces = array();
+    /**
      *  Current collections objects
      *      
      *  @type array
@@ -198,24 +204,75 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // GET CONNECTION CONFIG {{{
 
-    final static function setNameSpace($namespace)
+    // setNameSpace($namespace='') {{{
+    /**
+     *  Set a namespace for all connections is it is called
+     *  statically from ActiveMongo or for specific classes
+     *  if it is called from an instance.
+     *
+     *  @param string $namespace
+     *
+     *  @return bool
+     */
+    final static function setNamespace($namespace='')
     {
-        self::$_namespace = $namespace;
-    }
+        if (preg_match("#^[\-\_a-z0-9]*$#i", $namespace)) {
+            /* sort of standard late binding */
+            if (isset($this)) {
+                $context = get_class($this);
+            } else {
+                $context = get_called_class();
+            }
 
+            if ($context == __CLASS__) {
+                self::$_namespace = $namespace;
+            } else {
+                self::$_namespaces[$context] = $namespace;
+            }
+            return TRUE;
+        }
+        return FALSE;
+    }
+    // }}}
+
+    // collectionName() {{{
+    /**
+     *  Get CollectionName
+     *
+     *  Return the collection name (along with its namespace) for
+     *  the current object.
+     *
+     *  Warning: This must not be called statically from outside the 
+     *  fundtion.
+     *
+     *  @return string
+     */
     final public function collectionName()
     {
-        $collection = '';
-        if (self::$_namespace) { 
-            $collection = self::$_namespace.".";
-        }
-        if (isset($this)) {
-            $collection .= $this->getCollectionName();
+        $parent = __CLASS__;
+        /* Need to check if $this is instance of $parent
+         * because PHP5.2 fails detecting $this when a non-static
+         * method is called statically from another class ($this is 
+         * inherited)
+         */
+        if (isset($this) && $this InstanceOf $parent) {
+            $collection = $this->getCollectionName();
+            $context    = get_class($this);
         } else {
-            $collection .= self::getCollectionName();
+            /* ugly, it might fail if getCollectionName has some refernce to $this */
+            $context    = get_called_class();
+            $collection = call_user_func(array($context, 'getCollectionName'));
         }
+
+        if (isset(self::$_namespaces[$context]) && self::$_namespaces[$context]) { 
+            $collection = self::$_namespaces[$context].".{$collection}";
+        } else if (self::$_namespace) { 
+            $collection = self::$_namespace.".{$collection}";
+        }
+
         return $collection;
     }
+    // }}}
 
     // string getCollectionName() {{{
     /**

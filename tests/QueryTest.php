@@ -47,10 +47,17 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
     function testNamespace()
     {
-        $c = new Model1;
+        $this->assertFalse(ActiveMongo::setNamespace('bad namespace'));
+        $this->assertFalse(ActiveMongo::setNamespace('bad=namespace'));
+        $this->assertFalse(ActiveMongo::setNamespace('bad=namespace!'));
+        $this->assertTrue(ActiveMongo::setNamespace('good_namespace'));
         ActiveMongo::setNamespace('testing');
-        $this->assertEquals($c->collectionName(), 'testing.model1');
-        ActiveMongo::setNamespace(NULL);
+        Model2::setNamespace('foobar');
+        list($m1, $m2) = array(new model1, new model2);
+        $this->assertEquals($m1->collectionName(), 'testing.model1');
+        $this->assertEquals($m2->collectionName(), 'foobar.model2');
+        $this->assertTrue(ActiveMongo::setNamespace(NULL)); /* set no-namespace */
+        $this->assertTrue(Model2::setNamespace(NULL)); /* set no-namespace */
     }
 
     function testInstall()
