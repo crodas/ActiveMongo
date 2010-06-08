@@ -1554,11 +1554,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             foreach ($refs as $ref) {
                 $id    = $ref['ref']['$id'];
                 $place = $ref['key'];
-                $req->rewind();
-                while ($req->getID() != $id && $req->next());
-
-                $this->_deferencingRestoreProperty($document, $place, clone $req);
-
+                foreach ($req as $item) {
+                    if ($item->getID() == $id) {
+                        $this->_deferencingRestoreProperty($document, $place, clone $req);
+                    }
+                }
                 unset($obj);
             }
 
