@@ -88,12 +88,25 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $c->doQuery();
         $this->assertFalse($c->servedFromCache());
 
+        /* Disconnect to test the cache works properly */
+        ActiveMongo::disconnect();
+        $this->assertFalse(ActiveMongo::isConnected());
+
         $d = new CacheableModel;
         $d->where('_id', $id);
         $d->doQuery();
 
+        $this->assertFalse(ActiveMongo::isConnected());
         $this->assertTrue($d->servedFromCache());
         $this->assertEquals($c->prop, $d->prop);
+
+        /* non-cached query, to see if it is reconnected to mongodb */
+        $d = new CacheableModel;
+        $d->where('_id', 'foobar');
+        $d->doQuery();
+
+        $this->assertFalse($d->servedFromCache());
+        $this->assertTrue(ActiveMongo::isConnected());
 
         return $id;
     }

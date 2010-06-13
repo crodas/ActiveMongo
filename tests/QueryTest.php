@@ -615,4 +615,11 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $this->assertTrue(TRUE);
         }
     }
+
+    function testDisconnect()
+    {
+        $this->assertTrue(ActiveMongo::isConnected());
+        ActiveMongo::Disconnect();
+        $this->assertFalse(ActiveMongo::isConnected());
+    }
 }

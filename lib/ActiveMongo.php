@@ -356,6 +356,33 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // isConnected() {{{
+    /**
+     *  Return TRUE is there is any active connection
+     *  to MongoDB.
+     *
+     *  @return bool
+     */
+    final public static function isConnected()
+    {
+        return !is_null(self::$_conn) || count(self::$_dbs) > 0 || count(self::$_collections) > 0;
+    }
+    // }}}
+
+    // disconnect() {{{
+    /**
+     *  Destroy all connections objects to MongoDB if any.
+     *
+     *  @return void
+     */
+    final public static function disconnect()
+    {
+        self::$_conn        = NULL;
+        self::$_dbs         = array();
+        self::$_collections = array();
+    }
+    // }}}
+
     // MongoConnection _getConnection() {{{
     /**
      *  Get Connection
