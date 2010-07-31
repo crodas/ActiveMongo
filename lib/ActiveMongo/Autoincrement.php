@@ -35,31 +35,36 @@
   +---------------------------------------------------------------------------------+
 */
 
-// Class FilterException {{{
-class  ActiveMongo_Exception extends Exception
+final class AutoIncrement_Namespace extends ActiveMongo
 {
-}
-// }}}
+    public $collection;
+    public $last;
 
-// Class FilterException {{{
-/**
- *  FilterException
- *
- *  This is Exception is thrown if any validation
- *  fails when save() is called.
- *
- */
-class ActiveMongo_FilterException extends ActiveMongo_Exception 
+    function setup()
+    {
+        $this->addIndex('collection', array('unique' => TRUE));
+    }
+}
+
+abstract class ActiveMongo_Autoincrement extends ActiveMongo
 {
+
+    final public function before_create(&$document)
+    {
+        $collection = $this->collectionName();
+        $counter    = new AutoIncrement_Namespace;
+        $counter->where('collection', $collection);
+        $counter->limit(1);
+        $counter->findAndModify(array('$inc' => array('last' => 1)));
+
+        if (!$counter->doQuery()->Valid()) {
+            $counter->collection = $collection;
+            $counter->last       = 1;
+            $counter->save();
+        } else {
+            $counter->current();
+        }
+
+        $document['_id'] = $counter->last;
+    }
 }
-// }}}
-
-
-/*
- * Local variables:
- * tab-width: 4
- * c-basic-offset: 4
- * End:
- * vim600: sw=4 ts=4 fdm=marker
- * vim<600: sw=4 ts=4
- */

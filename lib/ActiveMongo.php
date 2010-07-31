@@ -325,7 +325,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             if ($class == __CLASS__) {
                 break;
             }
-            if (is_subclass_of($class, __CLASS__)) {
+            
+            $reflection = new ReflectionClass($class);
+
+            if (!$reflection->isAbstract() && $reflection->isSubclassOf(__CLASS__)) {
                 $obj = new $class;
                 $obj->setup();
             }
@@ -1177,6 +1180,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $this->_sort       = NULL;
         $this->_limit      = 0;
         $this->_skip       = 0;
+        $this->_id         = NULL;
         $this->setResult(array());
     }
     // }}}
@@ -1687,10 +1691,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final public function getID()
     {
-        if ($this->_id instanceof MongoID) {
-            return $this->_id;
-        }
-        return FALSE;
+        return$this->_id !== NULL ? $this->_id : FALSE; 
     }
     // }}}
    
@@ -1752,7 +1753,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             switch ($this->_cursor_ex) {
             case self::FIND_AND_MODIFY:
                 $this->_cursor_ex_value = NULL;
-                return;
+                return $this;
             default:
                 throw new ActiveMongo_Exception("Invalid _cursor_ex value");
             }
@@ -2082,6 +2083,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             throw new ActiveMongo_Exception("Empty \$document is not allowed");
         }
 
+        if (substr(key($document), 0, 1) != '$') {
+            /* document to execute is not a command, so let's append
+               it as is */
+            $document = array('$set' => $document);
+        }
+
         $this->_cursor_ex     = self::FIND_AND_MODIFY;
         $this->_findandmodify = $document;
 
@@ -2092,12 +2099,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $query = (array)$this->_query;
 
+
         $query = array(
             "findandmodify" => $this->CollectionName(),
             "query" => $query,
-            "update" => array('$set' => $this->_findandmodify),
+            "update" => $this->_findandmodify,
             "new" => TRUE,
         );
+
         if (isset($this->_sort)) {
             $query["sort"] =  $this->_sort;
         }
@@ -2125,7 +2134,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 }
 
 require_once dirname(__FILE__)."/Validators.php";
-require_once dirname(__FILE__)."/Exceptions.php";
+require_once dirname(__FILE__)."/ActiveMongo/Exception.php";
+require_once dirname(__FILE__)."/ActiveMongo/FilterException.php";
+require_once dirname(__FILE__)."/ActiveMongo/Autoincrement.php";
 
 /*
  * Local variables:

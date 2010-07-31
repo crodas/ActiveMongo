@@ -8,6 +8,7 @@ require "HookTest.php";
 require "ArrayTest.php";
 require "Bugs.php";
 require "CacheTest.php";
+require "Autoincrement.php";
 require "__SleepTest.php";
 
 define ("DB", "test");
@@ -25,6 +26,7 @@ class ActiveMongoSuite extends PHPUnit_Framework_TestSuite
         $suite->addTestSuite('ArrayTest');
         $suite->addTestSuite('SleepTest');
         $suite->addTestSuite('CacheTest');
+        $suite->addTestSuite('AutoincrementTest');
         return $suite;
     }
 

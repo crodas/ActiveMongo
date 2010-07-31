@@ -18,6 +18,9 @@ class QueryTest extends PHPUnit_Framework_TestCase
         try {
             Model3::drop();
         } catch (ActiveMongo_Exception $e) {}
+        try {
+            AutoIncrement_Model::drop();
+        } catch (ActiveMongo_Exception $e) {}
         $this->assertTrue(TRUE);
     }
 
