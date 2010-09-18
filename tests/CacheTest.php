@@ -82,7 +82,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $c->prop = 'bar';
         $c->save();
         $id = $c->getID();
-        $c->reset();
+        $c->clean();
 
         $c->where('_id', $id);
         $c->doQuery();
@@ -96,8 +96,8 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $d->where('_id', $id);
         $d->doQuery();
 
-        $this->assertFalse(ActiveMongo::isConnected());
         $this->assertTrue($d->servedFromCache());
+        $this->assertFalse(ActiveMongo::isConnected());
         $this->assertEquals($c->prop, $d->prop);
 
         /* non-cached query, to see if it is reconnected to mongodb */
@@ -116,7 +116,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
         $var = array('bar','foo','xxx','ccc');
         $c = new CacheableModel;
         foreach ($var as $v) {
-            $c->reset();
+            $c->clean();
             $c->var['var_name'] = $v;
             $c->$v = TRUE;
             $c->save();
@@ -133,7 +133,8 @@ class CacheTest extends PHPUnit_Framework_TestCase
             }
         }
 
-        $query->reset();
+        $query->clean();
+
         $query->where('var.var_name IN', $var);
         $query->doQuery();
         $this->assertTrue($query->servedFromCache());

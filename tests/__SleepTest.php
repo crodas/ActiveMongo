@@ -27,7 +27,7 @@ class SleepTest extends PHPUnit_Framework_TestCase
         $c->b = 10;
         $c->save();
 
-        $c->reset();
+        $c->clean();
         $c->where('a', 5);
         $c->doQuery();
         $this->assertEquals($c->a, 5);

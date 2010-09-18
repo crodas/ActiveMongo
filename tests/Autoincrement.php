@@ -24,7 +24,7 @@ class AutoincrementTest extends PHPUnit_Framework_TestCase
             $last = $obj->getID();
         }
 
-        $c->reset();
+        $c->clean();
         $this->assertEquals($c->count(), 1000);
 
     }

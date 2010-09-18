@@ -67,7 +67,7 @@ final class CacheCursor Extends MongoCursor
 
     function reset()
     {
-        $this->pos = -1;
+        $this->pos = 0;
     }
 
     function key()

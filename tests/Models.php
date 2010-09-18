@@ -53,7 +53,7 @@ class Model2 extends ActiveMongo
     function update_refs($m1)
     {
         /* reset just in case */
-        $this->reset();
+        $this->clean();
         $this->where('M1', $m1['_id']);
         $this->Update(array('a' => $m1['a']));
     }

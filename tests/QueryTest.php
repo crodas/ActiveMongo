@@ -45,9 +45,28 @@ class QueryTest extends PHPUnit_Framework_TestCase
         Model3::batchInsert($data, TRUE, TRUE);
 
         $c = new Model3;
+
+        $i = 0;
+        foreach ($c as $d) {
+            $this->assertEquals($i++, $d->int);
+        }
+
+        $this->assertEquals($i, 5000);
         $this->assertEquals($c->count(), 5000);
     }
 
+    function testOneResult()
+    {
+        $c = new Model3;
+        $c->limit(1);
+
+        $i = 0;
+        foreach ($c as $r) {
+            $i++;
+        }
+
+        $this->assertEquals($i, 1);
+    }
     function testNamespace()
     {
         $this->assertFalse(ActiveMongo::setNamespace('bad namespace'));
@@ -81,14 +100,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
     /**
      *  @depends testBulkInserts
      */
-    function testReset()
+    function testClean()
     {
         $c = new Model3;
         $c->doQuery();
 
         $this->assertTrue(isset($c->int));
         $this->assertTrue(isset($c['int']));
-        $c->reset();
+        $c->clean();
         $this->assertFalse(isset($c->int));
         $this->assertFalse(isset($c['int']));
     }
@@ -361,7 +380,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
 
         /* now empty $c and query for `int` value */
-        $c->reset();
+        $c->clean();
         $c->where('_id', $id);
         $c->doQuery();
         $this->assertEquals($c->int, 0);
@@ -392,7 +411,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->a = 1;
         $c->save();
 
-        $c->reset();
+        $c->clean();
 
         /* object with no results can't be cloned */
         try {
@@ -418,7 +437,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
 
         /* cloned object can't be reused */
         try {
-            $item_cloned->reset();
+            $item_cloned->clean();
             $this->AssertTrue(FALSE);
         } catch (ActiveMongo_Exception $e) {
             $this->AssertTrue(TRUE);
@@ -460,7 +479,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
             $i++;
         }
 
-        $c->reset();
+        $c->clean();
 
         $this->assertEquals(2, $i);
         $this->assertEquals($c->count(), 4898);
@@ -579,7 +598,9 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $d->save();
 
         $c = new Model1;
-        $c->find($d->getID());
+        $c->where('_id', $d->getID());
+        $c->doQuery();
+
         $this->assertEquals(1, $c->count());
         $this->assertEquals($c->a, $d->a);
     }
@@ -608,7 +629,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $this->assertEquals($i, 50);
 
         try {
-            $c->reset();
+            $c->clean();
             $c->where('int <= ', 1000);
             $c->where('processing exists', FALSE);
             $c->limit(50);

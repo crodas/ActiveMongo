@@ -48,7 +48,7 @@ class ArrayTest extends PHPUnit_Framework_TestCase
         $id = $c->getID();
 
 
-        $c->reset();
+        $c->clean();
         $c->where('_id', $id);
         $c->doQuery();
 
