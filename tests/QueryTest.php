@@ -616,6 +616,35 @@ class QueryTest extends PHPUnit_Framework_TestCase
         }
     }
 
+    function testFindVariations()
+    {
+      // add a few entries:
+      $documents = array(
+        array('int' => '1', 'mod3' => '1'),
+        array('int' => '2', 'mod3' => '2'),
+        array('int' => '3', 'mod3' => '0'),
+        array('int' => '4', 'mod3' => '1'),
+        array('int' => '5', 'mod3' => '2'),
+        array('int' => '6', 'mod3' => '0'),
+        array('int' => '7', 'mod3' => '1'),
+        array('int' => '8', 'mod3' => '2'),
+        array('int' => '9', 'mod3' => '0'),
+      );
+      Model3::BatchInsert($documents, TRUE, FALSE);
+
+      // test findCol (which also tests findPairs and fields)
+      $c = new Model3;
+      $findCol = $c->findCol('mod3', array('int'=>array('$lt'=>'5')));
+      $this->assertEquals(array_values($findCol), array('1', '2', '0', '1'));
+
+      // test findOneValue (which will test findOne)
+      $this->assertEquals($c->findOneValue('mod3', array('int'=>'5')), '2');
+
+      // test findOneObj (which will test findOneAssoc)
+      $obj = $c->findOneObj(array('int'=>'5'));
+      $this->assertEquals($obj, (object)array('int'=>'5', 'mod3'=>'2', '_id'=>$obj->_id));
+    }
+
     function testDisconnect()
     {
         $this->assertTrue(ActiveMongo::isConnected());
