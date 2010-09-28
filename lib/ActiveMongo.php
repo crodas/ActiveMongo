@@ -1215,6 +1215,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $this->setResult(array());
             return $result;
         } else {
+            $criteria = (array) $this->_query;
+          
             /* remove */
             $this->triggerEvent('before_delete', array($document));
             $this->_getCollection()->remove($criteria);
