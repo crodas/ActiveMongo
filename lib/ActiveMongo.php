@@ -1708,7 +1708,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $query = array(
             'collection' => $this->CollectionName(),
             'query'      => (array)$this->_query, 
-            'properties' => (array)$this->_properties,
+            'properties' => (object)$this->_properties,
             'sort'       => (array)$this->_sort, 
             'skip'       => $this->_skip,
             'limit'      => $this->_limit
