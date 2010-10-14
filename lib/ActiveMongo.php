@@ -14,16 +14,16 @@
   |                                                                                 |
   | 3. All advertising materials mentioning features or use of this software        |
   |    must display the following acknowledgement:                                  |
-  |    This product includes software developed by César D. Rodas.                  |
+  |    This product includes software developed by CÃ©sar D. Rodas.                  |
   |                                                                                 |
-  | 4. Neither the name of the César D. Rodas nor the                               |
+  | 4. Neither the name of the CÃ©sar D. Rodas nor the                               |
   |    names of its contributors may be used to endorse or promote products         |
   |    derived from this software without specific prior written permission.        |
   |                                                                                 |
-  | THIS SOFTWARE IS PROVIDED BY CÉSAR D. RODAS ''AS IS'' AND ANY                   |
+  | THIS SOFTWARE IS PROVIDED BY CÃ‰SAR D. RODAS ''AS IS'' AND ANY                   |
   | EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED       |
   | WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE          |
-  | DISCLAIMED. IN NO EVENT SHALL CÉSAR D. RODAS BE LIABLE FOR ANY                  |
+  | DISCLAIMED. IN NO EVENT SHALL CÃ‰SAR D. RODAS BE LIABLE FOR ANY                  |
   | DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES      |
   | (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;    |
   | LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND     |
@@ -31,7 +31,7 @@
   | (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS   |
   | SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE                     |
   +---------------------------------------------------------------------------------+
-  | Authors: César Rodas <crodas@php.net>                                           |
+  | Authors: CÃ©sar Rodas <crodas@php.net>                                           |
   +---------------------------------------------------------------------------------+
 */
 
@@ -67,7 +67,7 @@ if (version_compare(PHP_VERSION, '5.3') < 0) {
  *  aims to provide easy iteration, data validation before update,
  *  and efficient update.
  *
- *  @author César D. Rodas <crodas@php.net>
+ *  @author CÃ©sar D. Rodas <crodas@php.net>
  *  @license BSD License
  *  @package ActiveMongo
  *  @version 1.0
@@ -202,6 +202,20 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private $_cloned = FALSE;
     // }}}
 
+    final static function isAbstractChildClass($class)
+    {
+      $r = new ReflectionClass($class);
+      if ($r->IsAbstract())
+      {
+        // make sure it's a child
+        if ($r->isSubclassOf(__CLASS__))
+        {
+          return true;
+        }
+      }
+      return false;
+    }
+    
     // GET CONNECTION CONFIG {{{
 
     // setNameSpace($namespace='') {{{
@@ -224,7 +238,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 $context = get_called_class();
             }
 
-            if ($context == __CLASS__) {
+            if ($context == __CLASS__ || self::isAbstractChildClass($context)) {
                 self::$_namespace = $namespace;
             } else {
                 self::$_namespaces[$context] = $namespace;
@@ -322,6 +336,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $classes = array_reverse(get_declared_classes());
         foreach ($classes as $class)
         {
+            $r = new ReflectionClass($class);
+            if ($r->IsAbstract()) // skip abstract ones
+            {
+              continue;
+            }
+          
             if ($class == __CLASS__) {
                 break;
             }
@@ -636,7 +656,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         $class = get_called_class();
-        if ($class == __CLASS__) {
+        if ($class == __CLASS__ || self::isAbstractChildClass($class)) {
             $events = & self::$_super_events;
         } else {
             $events = & self::$_events[$class];
@@ -785,37 +805,307 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
-    // this find([$_id]) {{{
+    // this find([$_id], [$fields], [$use_document_vars]) {{{
     /**
-     *    Simple find.
+     *    find supports 4 modes of operation.
      *
+     *    MODE 1:
+     *    $_id = null
+     *    Will search using the current document values assigned to this object
+     *    
+     *    MODE 2:
+     *    $_id = a non-array value
+     *    Will search for a document with matching ID
+     *    
+     *    MODE 3:
+     *    $_id = a simple list (non-associative)
+     *    Will search for all document with matching IDs 
+     *    
+     *    MODE 4:
+     *    $_id = an associative array
+     *    Will use the array as the template
+     *    
+     *    $fields can be used to limit the return value to only certain fields
+     *    
+     *    By default, the document values are used for the search only in
+     *    mode 1, but this can be changed by setting $use_document_vars to
+     *    something other than null 
+     *    
      *    Really simple find, which uses this object properties
      *    for fast filtering
      *
      *    @return object this
      */
-    final function find($_id = NULL)
+    final function find($_id = NULL, $fields = null, $use_document_vars = NULL)
     {
-        $vars = get_document_vars($this);
-        $parent_class = __CLASS__;
-        foreach ($vars as $key => $value) {
-            if (!$value) {
-                unset($vars[$key]);
-            }
-            if ($value InstanceOf $parent_class) {
-                $this->getColumnDeference($vars, $key, $value);
-                unset($vars[$key]); /* delete old value */
-            }
+      return $this->_find($_id, $fields, $use_document_vars, false);
+    }
+    // }}}
+
+    // this findOne([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    See documentation for find()
+     *
+     *    @return object this
+     */
+    final function findOne($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      return $this->_find($_id, $fields, $use_document_vars, false);
+    }
+    // }}}
+    
+    // mixed findOneValue($field, [$_id], [$use_document_vars]) {{{
+    /**
+     *    $field = the name of the field to return the value of
+     *    
+     *    For $_id and $use_document_vars, see documentation for find()
+     *    
+     *    @return mixed (value of the field)
+     */
+    final function findOneValue($field, $_id = NULL, $use_document_vars = NULL)
+    {
+      $this->findOne($_id, array($field), $use_document_vars);
+      
+      // return the field value, or null if the record doesn't have it
+      if (isset($this[$field]))
+      {
+        return $this[$field];
+      }
+      else
+      {
+        return NULL;
+      }
+    }
+    // }}}
+    
+    // array findOneAssoc([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    Same as findOne, but returns the results in an associative array
+     *
+     *    @return array
+     */
+    final function findOneAssoc($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      return $this->findOne($_id, $fields, $use_document_vars)->getArray();
+    }
+    // }}}
+
+    // object findOneObj([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    Same as findOne, but returns the results in an object (stdClass)
+     *
+     *    @return object (stdClass)
+     */
+    final function findOneObj($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      return (object)$this->findOneAssoc($_id, $fields, $use_document_vars);
+    }
+    // }}}
+    
+    // array findAll([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    Same as find, but returns a single array with all the results at once.
+     *    
+     *    This should rarely ever be needed. Mostly useful for tasks such as 
+     *    quickly JSON encoding the whole result.
+     *
+     *    @return array(this)
+     */
+    final function findAll($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      $cursor = $this->find($_id, $fields, $use_document_vars);
+      $ret = array();
+      foreach($cursor as $row)
+      {
+        $ret[] = $row;
+      }
+      
+      return $ret;
+    }
+    // }}}
+    
+    // array findAllAssoc([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    Same as findAll, but returns the rows as associative arrays
+     *    
+     *    This should rarely ever be needed. Mostly useful for tasks such as 
+     *    quickly JSON encoding the whole result.
+     *
+     *    @return array(array)
+     */
+    final function findAllAssoc($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      $cursor = $this->find($_id, $fields, $use_document_vars);
+      $ret = array();
+      foreach($cursor as $row)
+      {
+        $ret[] = $row->getArray();
+      }
+      
+      return $ret;
+    }
+    // }}}
+
+    // array findAllObj([$_id], [$fields], [$use_document_vars]) {{{
+    /**
+     *    Same as findAll, but returns the rows as objects (stdClass)
+     *    
+     *    This should rarely ever be needed. Mostly useful for tasks such as 
+     *    quickly JSON encoding the whole result.
+     *
+     *    @return array(stdClass)
+     */
+    final function findAllObj($_id = NULL, $fields = null, $use_document_vars = NULL)
+    {
+      $cursor = $this->find($_id, $fields, $use_document_vars);
+      $ret = array();
+      foreach($cursor as $row)
+      {
+        $ret[] = (object)$row->getArray();
+      }
+      
+      return $ret;
+    }
+    // }}}
+
+    // array findPairs($keyfield, $valuefield, [$_id], [$use_document_vars]) {{{
+    /**
+     *    returns an array of key value pairs, using the specified fields
+     *    as the key and value. If the key is not unique the returned value
+     *    will be the value for any one of the keys.
+     *    
+     *    If rows that do not contain a value in the key field will not be returned
+     *    
+     *    For $_id and $use_document_vars, see documentation for find()
+     *    
+     *    @return array
+     */
+    final function findPairs($keyfield, $valuefield, $_id = NULL, $use_document_vars = NULL)
+    {
+      $cursor = $this->find($_id, array($keyfield, $valuefield), $use_document_vars);
+      $ret = array();
+      foreach($cursor as $row)
+      {
+        if (isset($row[$keyfield]))
+        {
+          if (isset($row[$valuefield]))
+          {
+            $ret[] = $row[$valuefield];
+          }
+          else
+          {
+            $ret[] = NULL;
+          }
         }
-        if ($_id != NULL) {
-            if (is_array($_id)) {
-                $vars['_id'] = array('$in' => $_id);
+      }
+      
+      return $ret;
+    }
+    // }}}
+
+    // array findCol($field, [$_id], [$use_document_vars]) {{{
+    /**
+     *    Same as findOneValue, but returns the the value for multiple rows as an array
+     *    
+     *    The keys in the array are the record ids
+     *    
+     *    @return array
+     */
+    final function findCol($field, $_id = NULL, $use_document_vars = NULL)
+    {
+      return $this->findPairs('_id', $field, $_id, $use_document_vars);
+    }
+    // }}}
+    
+    // this _find([$_id], [$fields], [$use_document_vars], $findOne) {{{
+    /**
+     *    See documentation for find()
+     *    
+     *    when $findOne is false, a collection is loaded, when true, a single
+     *    result is loaded into this object, otherwise a cursor is loaded.
+     *
+     *    @return object this
+     */
+    final function _find($_id = NULL, $fields = null, $use_document_vars = NULL, $findOne = false)
+    {
+        $vars = array();
+        
+        if ($use_document_vars || ($use_document_vars === NULL && $_id === NULL))
+        {
+          $vars = get_document_vars($this);
+          $parent_class = __CLASS__;
+          foreach ($vars as $key => $value) {
+              if (!$value) {
+                  unset($vars[$key]);
+              }
+              if ($value InstanceOf $parent_class) {
+                  $this->getColumnDeference($vars, $key, $value);
+                  unset($vars[$key]); /* delete old value */
+              }
+          }
+        }
+
+        if ($_id !== NULL)
+        {
+            if (is_array($_id))
+            {
+              $search_ids = array();
+              $loop_count = 0;
+              foreach($_id as $k => $v)
+              {
+                if ($loop_count != $k)
+                {
+                  $search_ids = false;
+                }
+                if (is_numeric($k))
+                {
+                  // This is part of a list of IDs
+                  if (is_array($search_ids)) // true unless we found a reson to treat it differently
+                  {
+                    $search_ids[] = $v;
+                  }
+                }
+                else
+                {
+                  
+                  $vars[$k] = $v;
+                }
+                $loop_count++;
+              }
+              
+              if (is_array($search_ids) && count($search_ids))
+              {
+                $vars['_id'] = array('$in' => $search_ids);
+              }
             } else {
                 $vars['_id'] = $_id;
             }
         }
-        $res  = $this->_getCollection()->find($vars);
-        $this->setCursor($res);
+        
+        if (!$fields)
+        {
+          // have no fields
+          $fields = array(); // Mongo expects an array, not NULL
+        }
+        else if (!is_array($fields))
+        {
+          // probably a single field not placed in an array
+          $fields = array($fields);
+        }
+
+        if ($findOne)
+        {
+          // single get
+          $res  = $this->_getCollection()->findOne($vars, $fields);
+          $this->setResult($res);
+        }
+        else
+        {
+          // collection get
+          $res  = $this->_getCollection()->find($vars, $fields);
+          $this->setCursor($res);
+        }
+        
         return $this;
     }
     // }}}
@@ -920,9 +1210,20 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             $this->triggerEvent('after_delete', array($document));
             $this->setResult(array());
             return $result;
+        }
+        else if ($this->_cursor_ex == self::FIND_AND_MODIFY &&
+                   !is_null($this->_cursor_ex_value) &&
+                   $this->_cursor_ex_value['ok'] == 1)
+        {
+            // delete by ID
+            $this->triggerEvent('before_delete', array($document));
+            $result = $this->_getCollection()->remove($document);
+            $this->triggerEvent('after_delete', array($document));
+            $this->setResult(array());
+            return $result;
         } else {
             $criteria = (array) $this->_query;
-
+          
             /* remove */
             $this->triggerEvent('before_delete', array($document));
             $this->_getCollection()->remove($criteria);
@@ -982,7 +1283,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final static function drop()
     {
         $class = get_called_class();
-        if ($class == __CLASS__) {
+        if ($class == __CLASS__ || self::isAbstractChildClass($class)) {
             return FALSE;
         }
         $obj = new $class;
@@ -1038,7 +1339,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $context = get_called_class();
 
-        if (__CLASS__ == $context) {
+        if (__CLASS__ == $context || self::isAbstractChildClass($context)) {
             throw new ActiveMongo_Exception("Invalid batchInsert usage");
         }
 
