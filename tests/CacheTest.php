@@ -57,7 +57,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
     function testInit()
     {
         try { 
-            CacheableModel::drop();
+            CacheableModel::instance()->drop();
         } Catch (ActiveMongo_Exception $e) {
         }
         ActiveMongo_Cache::setDriver(new CacheDriverMem);
@@ -114,7 +114,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
     function testCacheMultiple()
     {
         $var = array('bar','foo','xxx','ccc');
-        $c = new CacheableModel;
+        $c = CacheableModel::instance();
         foreach ($var as $v) {
             $c->clean();
             $c->var['var_name'] = $v;
@@ -240,7 +240,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
                 continue;
             }
             ActiveMongo_Cache::flushCache();
-            CacheableModel::drop();
+            CacheableModel::instance()->drop();
             $id   = $this->testCacheSimple();
             $vars = $this->testCacheMultiple();
             $this->testUpdateCache($id);

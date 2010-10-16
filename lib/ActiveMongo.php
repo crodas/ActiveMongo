@@ -257,7 +257,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  the current object.
      *
      *  Warning: This must not be called statically from outside the 
-     *  fundtion.
+     *  function.
      *
      *  @return string
      */
@@ -805,6 +805,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // {{{
+    // not contributed by me (crodas), probably this will
+    // removed. Instead the setCursor will be public
+    // we don't need more abstractions 
+
     // this find([$_id], [$fields], [$use_document_vars]) {{{
     /**
      *    find supports 4 modes of operation.
@@ -1110,6 +1115,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // }}}
+
     // void save(bool $async) {{{
     /**
      *    Save
@@ -1280,16 +1287,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  
      *  @return void
      */
-    final static function drop()
+    final function drop()
     {
-        $class = get_called_class();
-        if ($class == __CLASS__ || self::isAbstractChildClass($class)) {
-            return FALSE;
-        }
-        $obj = new $class;
-        $obj->triggerEvent('before_drop');
-        $result = $obj->_getCollection()->drop();
-        $obj->triggerEvent('after_drop');
+        $this->triggerEvent('before_drop');
+        $result = $this->_getCollection()->drop();
+        $this->triggerEvent('after_drop');
         if ($result['ok'] != 1) {
             throw new ActiveMongo_Exception($result['errmsg']);
         }
@@ -1335,24 +1337,17 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return bool
      */
-    final public static function batchInsert(Array $documents, $safe=TRUE, $on_error_continue=TRUE)
+    final public function batchInsert(Array $documents, $safe=TRUE, $on_error_continue=TRUE)
     {
-        $context = get_called_class();
-
-        if (__CLASS__ == $context || self::isAbstractChildClass($context)) {
-            throw new ActiveMongo_Exception("Invalid batchInsert usage");
-        }
-
-        
         if ($safe) {
             foreach ($documents as $id => $doc) {
                 $valid = FALSE;
                 if (is_array($doc)) {
                     try {
                         $args = array(&$doc, $doc);
-                        self::triggerEvent('before_create', $args, $context);
-                        self::triggerEvent('before_validate', $args, $context);
-                        self::triggerEvent('before_validate_creation', $args, $context);
+                        $this->triggerEvent('before_create', $args, $context);
+                        $this->triggerEvent('before_validate', $args, $context);
+                        $this->triggerEvent('before_validate_creation', $args, $context);
                         $documents[$id] = $doc;
                         $valid = TRUE;
                     } catch (Exception $e) {}
@@ -1416,9 +1411,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return array
      */
-    final static function getIndexes()
+    final function getIndexes()
     {
-        return self::_getCollection()->getIndexInfo();
+        return $this->_getCollection()->getIndexInfo();
     }
     // }}}
 
@@ -2027,7 +2022,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
         $cursor = new ActiveMongo_Cursor_Native($this->_getCollection(), $query);
 
-
         self::triggerEvent('after_query', array($query, $cursor));
 
         $this->setCursor($cursor);
@@ -2351,6 +2345,16 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // }}}
 
     // }}}
+
+    final public static function instance()
+    {
+        $obj   = get_called_class();
+        $class = __CLASS__;
+        if ($obj != $class && is_subclass_of($obj, $class)) {
+            return new $obj;
+        }
+        throw new ActiveMongo_Exception("Couldn't create an instance of {$obj}");
+    }
 
     // __sleep() {{{
     /**

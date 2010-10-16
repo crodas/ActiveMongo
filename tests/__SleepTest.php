@@ -16,7 +16,7 @@ class SleepTest extends PHPUnit_Framework_TestCase
     function __construct()
     {
         try {
-            SleepModel::drop();
+            SleepModel::instance()->drop();
         } catch (ActiveMongo_Exception $e) {}
     }
 
