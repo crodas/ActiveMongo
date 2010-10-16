@@ -1345,12 +1345,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 if (is_array($doc)) {
                     try {
                         $args = array(&$doc, $doc);
-                        $this->triggerEvent('before_create', $args, $context);
-                        $this->triggerEvent('before_validate', $args, $context);
-                        $this->triggerEvent('before_validate_creation', $args, $context);
+                        $this->triggerEvent('before_create', $args);
+                        $this->triggerEvent('before_validate', $args);
+                        $this->triggerEvent('before_validate_creation', $args);
                         $documents[$id] = $doc;
                         $valid = TRUE;
-                    } catch (Exception $e) {}
+                    } catch (ActiveMongo_Exception $e) {}
                 }
                 if (!$valid) {
                     if (!$on_error_continue) {
@@ -1477,6 +1477,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // clean() {{{
     function clean()
     {
         if ($this->_cloned) {

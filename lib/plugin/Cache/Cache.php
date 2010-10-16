@@ -593,12 +593,10 @@ final class ActiveMongo_Cache
         $docs     = array();
 
         try {
-            $id = 0;
-            foreach ($cursor as $document) {
+            foreach ($cursor as $id => $document) {
                 $ids[$id]  = $document['_id'];
                 $docs[$id] = $document;
                 $ttl[$id]  = 3600;
-                $id++;
             }
             $this->driver->setMulti($docs, $ttl);
             $this->driver->set($query_id, $ids, 3600);

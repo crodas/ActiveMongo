@@ -76,6 +76,11 @@ class ActiveMongo_Cursor_Native extends ActiveMongo_Cursor_Interface
         $this->cursor->rewind();
     }
 
+    function key()
+    {
+        return $this->cursor->key();
+    }
+
     function valid()
     {
         return $this->cursor->valid();

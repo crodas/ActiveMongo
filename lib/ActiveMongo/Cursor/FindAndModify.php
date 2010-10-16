@@ -112,4 +112,9 @@ class ActiveMongo_Cursor_FindAndModify extends ActiveMongo_Cursor_Interface
         return $this->result['value'];
     }
 
+    public function key()
+    {
+        return (string)$this->result['value']['_id'];
+    }
+
 }

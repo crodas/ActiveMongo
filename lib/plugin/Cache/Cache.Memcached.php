@@ -64,7 +64,7 @@ final class MemcachedDriver extends CacheDriver
         }
         $this->memcached = new Memcached;
         $this->memcached->addServer($this->host, $this->port);
-        return TRUE;
+        return true;
     }
 
     function flush()

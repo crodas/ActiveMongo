@@ -57,7 +57,7 @@ abstract class ActiveMongo_Autoincrement extends ActiveMongo
         $counter->limit(1);
         $counter->findAndModify(array('$inc' => array('last' => 1)));
 
-        if (!$counter->doQuery()->Valid()) {
+        if (!$counter->Valid()) {
             $counter->collection = $collection;
             $counter->last       = 1;
             $counter->save();
