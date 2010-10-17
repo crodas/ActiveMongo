@@ -269,15 +269,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
          * method is called statically from another class ($this is 
          * inherited)
          */
-        if (isset($this) && $this InstanceOf $parent) {
-            $collection = $this->getCollectionName();
-            $context    = get_class($this);
-        } else {
-            /* ugly, it might fail if getCollectionName has some refernce to $this */
-            $context    = get_called_class();
-            $collection = call_user_func(array($context, 'getCollectionName'));
-        }
-
+        $collection = $this->getCollectionName();
+        $context    = get_class($this);
         if (isset(self::$_namespaces[$context]) && self::$_namespaces[$context]) { 
             $collection = self::$_namespaces[$context].".{$collection}";
         } else if (self::$_namespace) { 
@@ -298,11 +291,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     protected function getCollectionName()
     {
-        if (isset($this)) {
-            return strtolower(get_class($this));
-        } else {
-            return strtolower(get_called_class());
-        }
+        return strtolower(get_class($this));
     }
     // }}}
 
@@ -449,11 +438,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final protected function _getCollection()
     {
-        if (isset($this)) {
-            $colName = $this->CollectionName();
-        } else {
-            $colName = self::CollectionName();
-        }
+        $colName = $this->CollectionName();
+
         if (!isset(self::$_collections[$colName])) {
             self::$_collections[$colName] = self::_getConnection()->selectCollection($colName);
         }
@@ -670,20 +656,11 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     // }}}
 
     // triggerEvent(string $event, Array $events_params) {{{
-    final function triggerEvent($event, Array $events_params = array(), $context=NULL)
+    final function triggerEvent($event, Array $events_params = array())
     {
-        if (!$context){
-            if (!isset($this)) {
-                $class = get_called_class();
-                $obj   = $class;
-            } else {
-                $class = get_class($this);
-                $obj   = $this;
-            }
-        } else {
-            $class = $context;
-            $obj   = $context;
-        }
+        $class = get_class($this);
+        $obj   = $this;
+
         $events  = & self::$_events[$class][$event];
         $sevents = & self::$_super_events[$event];
 
@@ -1210,19 +1187,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function delete()
     {
         
-        $document = array('_id' => $this->_id);
+        $document = array('_id' => $this->getID());
         if ($this->_cursor !== NULL) {
-            $this->triggerEvent('before_delete', array($document));
-            $result = $this->_getCollection()->remove($document);
-            $this->triggerEvent('after_delete', array($document));
-            $this->setResult(array());
-            return $result;
-        }
-        else if ($this->_cursor_ex == self::FIND_AND_MODIFY &&
-                   !is_null($this->_cursor_ex_value) &&
-                   $this->_cursor_ex_value['ok'] == 1)
-        {
-            // delete by ID
             $this->triggerEvent('before_delete', array($document));
             $result = $this->_getCollection()->remove($document);
             $this->triggerEvent('after_delete', array($document));
