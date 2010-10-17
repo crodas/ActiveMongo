@@ -202,19 +202,25 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     private $_cloned = FALSE;
     // }}}
 
+    // isAbstractChildClass {{{
+    /**
+     *  Check if the $class is subclass of ActiveMongo
+     *  and if it is abstract.
+     *
+     *  @return bool
+     */
     final static function isAbstractChildClass($class)
     {
-      $r = new ReflectionClass($class);
-      if ($r->IsAbstract())
-      {
-        // make sure it's a child
-        if ($r->isSubclassOf(__CLASS__))
-        {
-          return true;
+        $r = new ReflectionClass($class);
+        if ($r->IsAbstract()) {
+            // make sure it's a child
+            if ($r->isSubclassOf(__CLASS__)) {
+                return true;
+            }
         }
-      }
-      return false;
+        return false;
     }
+    // }}}
     
     // GET CONNECTION CONFIG {{{
 
@@ -2313,6 +2319,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // }}}
 
+    // instance() {{{
+    /**
+     *  Create an instance of the current Model class
+     *  
+     *  @return object
+     */ 
     final public static function instance()
     {
         $obj   = get_called_class();
@@ -2322,6 +2334,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
         throw new ActiveMongo_Exception("Couldn't create an instance of {$obj}");
     }
+    // }}}
 
     // __sleep() {{{
     /**
