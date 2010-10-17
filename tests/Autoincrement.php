@@ -8,6 +8,9 @@ class AutoincrementTest extends PHPUnit_Framework_TestCase
 {
     function testInsert()
     {
+        try {
+            Autoincrement_Namespace::instance()->drop();
+        } catch (ActiveMongo_Exception $e) {}
 
         for ($i = 0; $i < 1000; $i++) {
             $c = new Autoincrement_Model;

@@ -114,7 +114,7 @@ class ActiveMongo_Cursor_FindAndModify extends ActiveMongo_Cursor_Interface
 
     public function count()
     {
-        throw new ActiveMongo_Exception("FindAndModify doesn'tsupport count");
+        throw new ActiveMongo_Exception("FindAndModify doesn't support count");
     }
 
     public function key()
