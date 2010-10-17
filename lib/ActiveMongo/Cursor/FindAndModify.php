@@ -112,6 +112,11 @@ class ActiveMongo_Cursor_FindAndModify extends ActiveMongo_Cursor_Interface
         return $this->result['value'];
     }
 
+    public function count()
+    {
+        throw new ActiveMongo_Exception("FindAndModify doesn'tsupport count");
+    }
+
     public function key()
     {
         return (string)$this->result['value']['_id'];

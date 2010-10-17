@@ -624,6 +624,14 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->sort('int DESC');
         $c->findAndModify(array("processing" => TRUE));
 
+        try {
+            $c->count();
+            $this->assertTrue(FALSE);
+        } catch (ActiveMongo_Exception $e) {
+            $this->assertTrue(TRUE);
+        }
+
+
         $i    = 0;
         $last = 0; 
         foreach ($c as $d) {
