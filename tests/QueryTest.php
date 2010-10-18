@@ -492,6 +492,8 @@ class QueryTest extends PHPUnit_Framework_TestCase
     {
         $c = new Dummy;
         $c['foo'] = 'bar';
+        $c->mFoo  = 'fooooo';
+        $c->eFoo  = md5('foo');
         $c->save();
 
         try {

@@ -1,7 +1,13 @@
 <?php
 
+
 class Dummy extends ActiveMongo
 {
+    static $validates_size_of = array(
+        array('mFoo', 'min' => 5, 'max' => 10),
+        array('eFoo', 'is' => 32)
+    );
+
 }
 
 class Model1 extends ActiveMongo
