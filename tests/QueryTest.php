@@ -497,10 +497,18 @@ class QueryTest extends PHPUnit_Framework_TestCase
         $c->save();
 
         try {
+            $c->eFoo = 'bar';
+            $c->save();
+            $this->assertTrue(FALSE);
+        } catch (ActiveMongo_FilterException $e) {
+            $this->assertTrue(TRUE);
+        }
+
+        try {
             ActiveMongo::instance()->drop();
-            $this->assertTrue(false);
+            $this->assertTrue(FALSE);
         } catch (ActiveMongo_exception $e) {
-            $this->assertTrue(true);
+            $this->assertTrue(TRUE);
         }
 
         $this->assertTrue(Dummy::instance()->drop());
