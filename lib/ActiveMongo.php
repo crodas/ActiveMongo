@@ -434,7 +434,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
-    // MongoCollection _getCollection() {{{
+    // MongoCollection getCollection() {{{
     /**
      *  Get Collection
      *
@@ -442,7 +442,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *
      *  @return MongoCollection
      */
-    final protected function _getCollection()
+    final public function getCollection()
     {
         $colName = $this->CollectionName();
 
@@ -1084,13 +1084,13 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         if ($findOne)
         {
           // single get
-          $res  = $this->_getCollection()->findOne($vars, $fields);
+          $res  = $this->getCollection()->findOne($vars, $fields);
           $this->_setResult($res);
         }
         else
         {
           // collection get
-          $res  = $this->_getCollection()->find($vars, $fields);
+          $res  = $this->getCollection()->find($vars, $fields);
           $this->setCursor($res);
         }
         
@@ -1118,7 +1118,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function save($async=TRUE)
     {
         $update   = isset($this->_id) && $this->_id InstanceOf MongoID;
-        $conn     = $this->_getCollection();
+        $conn     = $this->getCollection();
         $document = $this->getCurrentDocument($update);
         $object   = $this->getDocumentVars();
 
@@ -1196,7 +1196,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $document = array('_id' => $this->getID());
         if ($this->_cursor !== NULL) {
             $this->triggerEvent('before_delete', array($document));
-            $result = $this->_getCollection()->remove($document);
+            $result = $this->getCollection()->remove($document);
             $this->triggerEvent('after_delete', array($document));
             $this->_setResult(array());
             return $result;
@@ -1205,7 +1205,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
           
             /* remove */
             $this->triggerEvent('before_delete', array($document));
-            $this->_getCollection()->remove($criteria);
+            $this->getCollection()->remove($criteria);
             $this->triggerEvent('after_delete', array($document));
 
             /* reset object */
@@ -1243,7 +1243,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $options  = array('multiple' => TRUE, 'safe' => $safe);
 
         /* update */
-        $col = $this->_getCollection();
+        $col = $this->getCollection();
         $col->update($criteria, array('$set' => $value), $options);
 
         /* reset object */
@@ -1262,7 +1262,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     final function drop()
     {
         $this->triggerEvent('before_drop');
-        $result = $this->_getCollection()->drop();
+        $result = $this->getCollection()->drop();
         $this->triggerEvent('after_drop');
         if ($result['ok'] != 1) {
             throw new ActiveMongo_Exception($result['errmsg']);
@@ -1333,7 +1333,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
         }
 
-        return self::_getCollection()->batchInsert($documents, array("safe" => $safe));
+        return self::getCollection()->batchInsert($documents, array("safe" => $safe));
     }
     // }}}
 
@@ -1371,7 +1371,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
         }
 
-        $collection = $this->_getCollection();
+        $collection = $this->getCollection();
 
         return $collection->ensureIndex($columns, $options);
     }
@@ -1385,7 +1385,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function getIndexes()
     {
-        return $this->_getCollection()->getIndexInfo();
+        return $this->getCollection()->getIndexInfo();
     }
     // }}}
 
@@ -1691,7 +1691,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     private function _deferencingQuery($request)
     {
-        $collection = $this->_getCollection();
+        $collection = $this->getCollection();
         $cursor     = $collection->find($request['query'], $request['fields']);
         if ($request['limit'] > 0) {
             $cursor->limit($request['limit']);
@@ -1993,7 +1993,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             return $this;
         }
 
-        $cursor = new ActiveMongo_Cursor_Native($this->_getCollection(), $query);
+        $cursor = new ActiveMongo_Cursor_Native($this->getCollection(), $query);
 
         self::triggerEvent('after_query', array($query, $cursor));
 
@@ -2288,7 +2288,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         );
 
 
-        $cursor = new ActiveMongo_Cursor_FindAndModify($this->_getCollection(), $query);
+        $cursor = new ActiveMongo_Cursor_FindAndModify($this->getCollection(), $query);
         $cursor->setUpdate($document);
 
         $this->setCursor($cursor);
@@ -2322,11 +2322,6 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     function setResult(MongoCursor $cursor)
     {
         $this->setCursor(new ActiveMongo_Cursor_Native($cursor));
-    }
-
-    function collection()
-    {
-        return $this->_getCollection();
     }
 
     // instance() {{{

@@ -33,7 +33,9 @@ class AutoincrementTest extends PHPUnit_Framework_TestCase
         // with custom query
         unset($last);
         $foo = Autoincrement_Model::instance();
-        $cursor = $foo->collection()->find();
+        $col = $foo->getCollection();
+
+        $cursor = $col-> find();
 
         $foo->setResult($cursor);
         foreach($foo as $obj) {
