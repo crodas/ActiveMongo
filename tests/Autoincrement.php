@@ -30,5 +30,21 @@ class AutoincrementTest extends PHPUnit_Framework_TestCase
         $c->clean();
         $this->assertEquals($c->count(), 1000);
 
+        // with custom query
+        unset($last);
+        $foo = Autoincrement_Model::instance();
+        $cursor = $foo->collection()->find();
+
+        $foo->setResult($cursor);
+        foreach($foo as $obj) {
+            if (isset($last)) {
+                $this->assertEquals($obj->getID(), $last+1);
+            }
+            $last = $obj->getID();
+        }
+
+        $foo->clean();
+        $this->assertEquals($foo->count(), 1000);
+
     }
 }

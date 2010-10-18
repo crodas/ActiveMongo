@@ -41,8 +41,13 @@ class ActiveMongo_Cursor_Native extends ActiveMongo_Cursor_Interface
     protected $current;
     protected $collection;
 
-    function __construct($collection, $query)
+    function __construct($collection, $query=array())
     {
+        if ($collection InstanceOf MongoCursor) {
+            $this->collection = null;
+            $this->cursor     = $collection;
+            return;
+        }
         $this->collection = $collection;
         
         if (count($query['properties']) > 0) {
@@ -103,6 +108,10 @@ class ActiveMongo_Cursor_Native extends ActiveMongo_Cursor_Interface
 
     function getReference($class)
     {
+        if (empty($this->collection)) {
+            throw new ActiveMongo_Exception("Can't have references");
+        }
+
         $ref =  array(
             '$ref'  => $this->collection->getName(),
             '$id'   => $this->current['_id'],
@@ -112,7 +121,7 @@ class ActiveMongo_Cursor_Native extends ActiveMongo_Cursor_Interface
 
         $cursor = $this->cursor;
         if (!is_callable(array($cursor, "Info"))) {
-            throw new Exception("Please upgrade your PECL/Mongo module to use this feature");
+            throw new ActiveMongo_Exception("Please upgrade your PECL/Mongo module to use this feature");
         }
 
         $ref['dynamic'] = array();
