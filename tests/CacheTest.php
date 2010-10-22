@@ -1,6 +1,6 @@
 <?php
 
-require "../lib/plugin/Cache/Cache.php";
+require "../lib/ActiveMongo/Plugin/Cache/Cache.php";
     
 
 class CacheableModel extends ActiveMongo
@@ -230,7 +230,7 @@ class CacheTest extends PHPUnit_Framework_TestCase
 
     function testDrivers()
     {
-        $drivers = glob("../lib/plugin/Cache/*.php");
+        $drivers = glob("../lib/ActiveMongo/Plugin/Cache/*.php");
         foreach ($drivers as $drive) {
             if (substr($drive,-9) == 'Cache.php') {
                 continue;
