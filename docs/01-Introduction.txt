@@ -1,0 +1,27 @@
+ActiveMongo 
+===========
+
+Introduction
+------------
+
+ActiveMongo is a simple active record implementation for MongoDB
+and PHP5 (tested on 5.2.11 and 5.3.3).
+
+Some benefits:
+ * Everything is an iterable object 
+ * Easy to create/update documents
+ * Actions, almost every action fires a callback that might modify
+   the default behaviour.
+ * Support plugins
+ * Autoincrements IDs
+ * Built-in cache support 
+
+
+Requirements 
+-------------
+
+ * PHP5 (Tested on 5.2.x and 5.3.x)
+ * PECL Mongo (>1.0.0)
+
+If the test suite passes in any other version of PHP drop me an e-mail
+to crodas@php.net and let me know about it.
