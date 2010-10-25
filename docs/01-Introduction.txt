@@ -10,11 +10,14 @@ and PHP5 (tested on 5.2.11 and 5.3.3).
 Some benefits:
  * Everything is an iterable object 
  * Easy to create/update documents
- * Actions, almost every action fires a callback that might modify
-   the default behaviour.
+ * Almost everything fires an event that might modify the default 
+   behaviour.
+ * Filters
  * Support plugins
  * Autoincrements IDs
  * Built-in cache support 
+ * Tiny tiny Query abstration
+ * Accept Mongo cursors (so you don't need to learn our query API)
 
 
 Requirements 
@@ -25,3 +28,58 @@ Requirements
 
 If the test suite passes in any other version of PHP drop me an e-mail
 to crodas@php.net and let me know about it.
+
+
+Quick start
+-----------
+
+To include ActiveMongo in your project you need to include it, then you 
+need to setup the connection. The connection is performed only when it 
+is needed, that means that we cannot detect connection error at this stage.
+
+{{{
+require "ActiveMongo.php";
+
+ActiveMongo::connect("database_name", "localhost", "user", "password");
+}}}
+
+Then you need to create a class for each collection. The idea behind ActiveMongo
+is that each class should add data validation easily, for instance in the 
+following example the username cannot be changed and the password is stored
+in encoded in sha1.
+
+{{{
+class Users Extends ActiveMongo
+{
+    public $username;
+    public $password;
+    public $email;
+
+    public function username_filter($user, $olduser) 
+    {
+        if ($olduser && $olduser != $user) {
+            throw new Exception("Username cannot be changed");
+        }
+        if (!preg_match("/^[a-zA-Z0-9]+$/", $user)) {
+            throw new Exception("Invalid username");
+        }
+    }
+
+    public function password_filter(&$pass)
+    {
+        $pass = sha1($pass);
+    }
+
+    public function after_create()
+    {
+        mail($this->email, "Welcome to our site", "bla, bla");
+    }
+
+    public function after_update()
+    {
+        mail($this->email, "Your data has been updated", "bla, bla");
+    }
+}
+}}}
+
+
