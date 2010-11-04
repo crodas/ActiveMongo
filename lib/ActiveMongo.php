@@ -2319,10 +2319,17 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // }}}
 
+    // setResult {{{
+    /**
+     *  Set a custom result
+     *
+     *  @return void
+     */
     function setResult(MongoCursor $cursor)
     {
         $this->setCursor(new ActiveMongo_Cursor_Native($cursor));
     }
+    // }}}
 
     // instance() {{{
     /**

@@ -55,6 +55,17 @@ class Users Extends ActiveMongo
     public $password;
     public $email;
 
+    /**
+     * every "users" document must have these
+     * properties
+     */
+    static $validates_presence_of = array(
+        'username', 'password', 'email'
+    );
+
+    /**
+     *  Username must be valid and it cannot be changed
+     */
     public function username_filter($user, $olduser) 
     {
         if ($olduser && $olduser != $user) {
@@ -65,16 +76,25 @@ class Users Extends ActiveMongo
         }
     }
 
+    /**
+     *  We only want to save sha1
+     */
     public function password_filter(&$pass)
     {
         $pass = sha1($pass);
     }
 
+    /**
+     *  Send email when the user is created
+     */
     public function after_create()
     {
         mail($this->email, "Welcome to our site", "bla, bla");
     }
 
+    /**
+     *  Send email when the user updates his profile
+     */
     public function after_update()
     {
         mail($this->email, "Your data has been updated", "bla, bla");
@@ -82,4 +102,81 @@ class Users Extends ActiveMongo
 }
 }}}
 
+Basic operations
+================
+
+Create a new document
+---------------------
+
+Create a new document is pretty easy, you only need to create a new instance
+of your model class, set the properties and call to save method.
+
+{{{
+    $user = Users::instance();
+    $user->username = "crodas";
+    $user->password = "mypass";
+    $user->email    = "crodas@php.net";
+    $user->save();
+}}}
+
+If any filter fails, or it could be saved by any internal error on Mongo (not very
+often, actually never saw this) it will throw an exception. 
+
+By default save behaves in a safe way, that means that it waits until MongoDB replies
+succeed or fails, you can override this by sending false as the first argument.
+
+Queries
+-------
+
+There are several ways to query Mongo with ActiveMongo.
+
+If you want to get all results from a collection, you simple need
+to iterate over an object, something like this:
+
+{{{
+    foreach (Users::instance() as $user) {
+        echo $user->username;
+    }
+}}}
+
+
+{{{
+        $user = Users::instance()->where('email', $email);
+        $user->doQuery();
+}}}
+
+4. Get one user based on his e-mail address (hard way)
+
+{{{
+    $query = array('email' => $email);
+    $cursor = Users::instance()->getCollection()->find( $query );
+    $user = Users::instance()->setResult( $cursor );
+}}}
+
+ActiveMongo will perform the query either when doQuery is called, or then `foreach` wants
+to iterate over an object.
+
+{{{
+$f = Users::instance()->where('foo', 'bar');
+$f->doQuery(); // query is performed manually
+
+//OR
+$f = Users::instance()->where('foo', 'bar');
+foreach ($f as $r) { // query is done automatically
+}
+}}}
+
+IMPORTANT: if you're iterating on an object it cannot be reused until you clean this object.
+
+{{{
+$f = Users::instance()->where('foo', 'bar');
+$f->doQuery(); 
+
+$f->where('bar', 'foo'); // will throw an exception because you cannot
+// modify a query in a iteration stage
+
+// Instead do this to reuse the object
+$f->clean();
+$f->where('bar', 'foo')
+}}}
 
