@@ -191,7 +191,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *    
      *  @type MongoID
      */
-    private $_id;
+    public $_id;
 
     /**
      *  Tell if the current object
@@ -1117,7 +1117,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final function save($async=TRUE)
     {
-        $update   = isset($this->_id) && $this->_id InstanceOf MongoID;
+        $update   = !empty($this->_current);
         $conn     = $this->getCollection();
         $document = $this->getCurrentDocument($update);
         $object   = $this->getDocumentVars();
@@ -1134,7 +1134,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         $this->triggerEvent('before_'.($update ? 'update' : 'create'), array(&$document, $object));
 
         if ($update) {
-            $conn->update(array('_id' => $this->_id), $document, array('safe' => $async));
+            $conn->update(array('_id' => $this->_current['_id']), $document, array('safe' => $async));
             if (isset($document['$set'])) {
                 foreach ($document['$set'] as $key => $value) {
                     if (strpos($key, ".") === FALSE) {
@@ -1174,6 +1174,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
                 }
             }
         } else {
+            if (!isset($document['_id']) || is_null($document['_id'])) {
+                $document['_id'] = new MongoId;
+            }
             $conn->insert($document, $async);
             $this->_setResult($document);
         }
