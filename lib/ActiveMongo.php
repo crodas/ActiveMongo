@@ -2277,7 +2277,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  
      *
      */
-    final function findAndModify($document)
+    final function findAndModify($document, $opts = array())
     {
         $this->_assertNotInQuery();
 
@@ -2290,6 +2290,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             'limit'      => $this->_limit
         );
 
+        if (is_array($opts) && count($opts) > 0) {
+            $query = array_merge($query, $opts);
+        }
 
         $cursor = new ActiveMongo_Cursor_FindAndModify($this->getCollection(), $query);
         $cursor->setUpdate($document);

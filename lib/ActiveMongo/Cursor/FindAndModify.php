@@ -81,7 +81,8 @@ class ActiveMongo_Cursor_FindAndModify extends ActiveMongo_Cursor_Interface
             'findandmodify' => $this->collection->getName(),
             'query'         => $this->query['query'],
             'update'        => $this->update,
-            'new'           => TRUE
+            'new'           => TRUE,
+            'upsert'        => !empty($this->query['upsert']),
         );
 
         if (isset($this->query['sort'])) {

@@ -37,34 +37,33 @@
 
 final class AutoIncrement_Namespace extends ActiveMongo
 {
-    public $collection;
+    public $class;
     public $last;
 
     function setup()
     {
-        $this->addIndex('collection', array('unique' => TRUE));
+        $this->addIndex('class', array('unique' => TRUE));
     }
 }
 
-abstract class ActiveMongo_Autoincrement extends ActiveMongo
-{
-
-    final public function before_create(&$document)
-    {
-        $collection = $this->collectionName();
+ActiveMongo::addEvent('before_create', function($class, &$obj) {
+    if (isset_static_variable($class, 'autoincrementID')) {
         $counter    = new AutoIncrement_Namespace;
-        $counter->where('collection', $collection);
+        $counter->where('class', $class);
         $counter->limit(1);
-        $counter->findAndModify(array('$inc' => array('last' => 1)));
+        $counter->findAndModify(array('$inc' => array('last' => 1)), array('upsert' => true, 'new' => true));
 
         if (!$counter->Valid()) {
-            $counter->collection = $collection;
-            $counter->last       = 1;
-            $counter->save();
+            throw new Exception("Unexpected error");
         } else {
             $counter->current();
         }
 
-        $document['_id'] = $counter->last;
+        $obj['_id'] = $counter->last;
     }
+});
+
+abstract class ActiveMongo_Autoincrement extends ActiveMongo
+{
+    static public $autoincrementID = true;
 }
