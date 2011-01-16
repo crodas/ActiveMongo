@@ -332,7 +332,7 @@ class QueryTest extends PHPUnit_Framework_TestCase
         );
         $c = new Model3;
         $c->where($query);
-        $c->update(array('newproperty' => $str));
+        $c->update(array('$set' => array('newproperty' => $str)));
 
         $c->where(array('int >' => 5, 'int <' => 30));
         foreach ($c as $item) {

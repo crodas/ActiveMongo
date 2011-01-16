@@ -61,7 +61,7 @@ class Model2 extends ActiveMongo
         /* reset just in case */
         $this->clean();
         $this->where('M1', $m1['_id']);
-        $this->Update(array('a' => $m1['a']));
+        $this->Update(array('$set' => array('a' => $m1['a'])));
     }
 
 }

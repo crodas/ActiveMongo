@@ -632,6 +632,22 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
+    // array getDocument() {{{
+    /**
+     *  Return the current documentif any, otherwise
+     *  return an empty array. 
+     *
+     *  Pretty similar to getCurrentDocument, except that
+     *  it does return the original document as it came 
+     *  from database.
+     */
+    final protected function getDocument()
+    {
+        return empty($this->_current) ? array() : $this->_current;
+    }
+    // }}}
+
+
     // }}}
 
     // EVENT HANDLERS {{{
@@ -1020,8 +1036,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     {
         $vars = array();
         
-        if ($use_document_vars || ($use_document_vars === NULL && $_id === NULL))
-        {
+        if ($use_document_vars || ($use_document_vars === NULL && $_id === NULL)) {
           $vars = get_document_vars($this);
           $parent_class = __CLASS__;
           foreach ($vars as $key => $value) {
@@ -1035,36 +1050,27 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
           }
         }
 
-        if ($_id !== NULL)
-        {
-            if (is_array($_id))
-            {
+        if ($_id !== NULL) {
+            if (is_array($_id)) {
               $search_ids = array();
               $loop_count = 0;
-              foreach($_id as $k => $v)
-              {
-                if ($loop_count != $k)
-                {
+              foreach($_id as $k => $v) {
+                if ($loop_count != $k) {
                   $search_ids = false;
                 }
-                if (is_numeric($k))
-                {
+                if (is_numeric($k)) {
                   // This is part of a list of IDs
-                  if (is_array($search_ids)) // true unless we found a reson to treat it differently
-                  {
+                  if (is_array($search_ids)) { // true unless we found a reson to treat it differently
                     $search_ids[] = $v;
                   }
-                }
-                else
-                {
+                } else {
                   
                   $vars[$k] = $v;
                 }
                 $loop_count++;
               }
               
-              if (is_array($search_ids) && count($search_ids))
-              {
+              if (is_array($search_ids) && count($search_ids)) {
                 $vars['_id'] = array('$in' => $search_ids);
               }
             } else {
@@ -1072,25 +1078,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             }
         }
         
-        if (!$fields)
-        {
+        if (!$fields) {
           // have no fields
           $fields = array(); // Mongo expects an array, not NULL
-        }
-        else if (!is_array($fields))
-        {
+        } else if (!is_array($fields)) {
           // probably a single field not placed in an array
           $fields = array($fields);
         }
 
-        if ($findOne)
-        {
+        if ($findOne) {
           // single get
           $res  = $this->getCollection()->findOne($vars, $fields);
           $this->_setResult($res);
-        }
-        else
-        {
+        } else {
           // collection get
           $res  = $this->getCollection()->find($vars, $fields);
           $this->setCursor($res);
@@ -1244,17 +1244,22 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     function update(Array $value, $safe=TRUE)
     {
-        $this->_assertNotInQuery();
-
-        $criteria = (array) $this->_query;
         $options  = array('multiple' => TRUE, 'safe' => $safe);
+        $criteria = (array) $this->_query;
+
+        if (!empty($this->_current)) {
+            $criteria = array('_id' => $this->_id);
+        }
 
         /* update */
         $col = $this->getCollection();
-        $col->update($criteria, array('$set' => $value), $options);
+        $col->update($criteria, $value, $options);
 
-        /* reset object */
-        $this->clean();
+
+        if (empty($this->_current)) {
+            /* reset object */
+            $this->clean();
+        }
 
         return TRUE;
     }
