@@ -685,12 +685,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         switch ($event) {
+        case 'before_save':
         case 'before_create':
         case 'before_update':
         case 'before_validate':
         case 'before_delete':
         case 'before_drop':
         case 'before_query':
+        case 'after_save':
         case 'after_create':
         case 'after_update':
         case 'after_validate':
@@ -1132,6 +1134,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
          /* PRE-save hook */
         $this->triggerEvent('before_'.($update ? 'update' : 'create'), array(&$document, $object));
+        $this->triggerEvent('before_save', array(&$document, $object));
 
         if ($update) {
             $conn->update(array('_id' => $this->_current['_id']), $document, array('safe' => $async));
@@ -1182,6 +1185,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         }
 
         $this->triggerEvent('after_'.($update ? 'update' : 'create'), array($document, $object));
+        $this->triggerEvent('after_save', array($document, $object));
 
         return TRUE;
     }
