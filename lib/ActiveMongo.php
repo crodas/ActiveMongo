@@ -2060,12 +2060,12 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
     }
     // }}}
 
-    // where($property, $value) {{{
+    // where($property, $value=NULL, $extra=NULL) {{{
     /**
      *  Where abstraction.
      *
      */
-    final function where($property_str, $value=NULL)
+    final function where($property_str, $value=NULL, $extra=NULL)
     {
         $this->_assertNotInQuery();
 
@@ -2171,22 +2171,25 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             /* geo operations */
             case 'near':
             case '$near':
-                $op = '$near';
-                $exp_scalar = FALSE;
+                $value = array('$near' => $value);
+                if (!empty($extra)) {
+                    $value['$maxDistance'] = (float)$extra;
+                }
                 break;
 
             default:
                 throw new ActiveMongo_Exception("Failed to parse '{$column[1]}'");
             }
 
-            if ($exp_scalar && is_array($value)) {
-                throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
-            } else if (!$exp_scalar && !is_array($value)) {
-                throw new ActiveMongo_Exception("The operation {$column[1]} expected an Array");
-            }
-
-            if ($op) {
-                $value = array($op => $value);
+            if (!empty($op)) {
+                if ($exp_scalar && is_array($value)) {
+                    throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+                } else if (!$exp_scalar && !is_array($value)) {
+                    throw new ActiveMongo_Exception("The operation {$column[1]} expected an Array");
+                }
+                if ($op) {
+                    $value = array($op => $value);
+                }
             }
         } else if (is_array($value)) {
             $value = array('$in' => $value);
