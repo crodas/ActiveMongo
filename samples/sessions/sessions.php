@@ -127,6 +127,6 @@ class MongoSession extends ActiveMongo
                 '$lt' => new MongoDate(time()-$max_time),
             )
         );
-        $this->_getCollection->remove($filter);
+        $this->getCollection->remove($filter);
     }
 }

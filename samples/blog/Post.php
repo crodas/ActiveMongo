@@ -119,7 +119,7 @@ class PostModel extends ActiveMongo
             'author' => $id,
         );
 
-        $this->_getCollection()->update($filter, $document, array('multiple' => TRUE));
+        $this->getCollection()->update($filter, $document, array('multiple' => TRUE));
 
         return TRUE;
     }
@@ -160,7 +160,7 @@ class PostModel extends ActiveMongo
     function testing1()
     {
         var_dump(array('a' => 1, 'a'=>2));
-        $c = $this->_getCollection();
+        $c = $this->getCollection();
         //$d = $c->find(array('author_name' => array('$all' => array(new MongoRegex("/^c/"), new MongoRegex('/s$/')  ))));
         $d = $c->find(array('author_name' => array('$all' => array(new MongoRegex("/^c/"), new MongoRegex('/s$/')  ))));
 
