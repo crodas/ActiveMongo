@@ -2184,6 +2184,9 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
             /* geo operations */
             case 'near':
             case '$near':
+                if (!is_array($value)) {
+                    throw new ActiveMongo_Exception("Cannot use comparing operations with Array");
+                }
                 $value = array('$near' => $value);
                 if (!empty($extra)) {
                     $value['$maxDistance'] = (float)$extra;
