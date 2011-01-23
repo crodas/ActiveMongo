@@ -751,14 +751,14 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
 
     // }}}
 
-    // void setCursor(MongoCursor $obj) {{{
+    // void setCursor(ActiveMongo_Cursor_Interface $obj) {{{
     /**
      *  Set Cursor
      *
      *  This method receive a MongoCursor and make
      *  it iterable. 
      *
-     *  @param MongoCursor $obj 
+     *  @param ActiveMongo_Cursor_Interface $obj 
      *
      *  @return void
      */
@@ -771,6 +771,19 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         } else {
             $this->_setResult(array());
         }
+    }
+    // }}}
+
+    // ActiveMongo_Cursor getCursor() {{{
+    /**
+     *  Return the current cursor, if any
+     *
+     *
+     *  @return ActiveMongo_Cursor_Interface|NULL
+     */
+    final function getCursor()
+    {
+        return $this->_cursor;
     }
     // }}}
 
