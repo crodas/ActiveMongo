@@ -2368,12 +2368,16 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      *  
      *  @return object
      */ 
-    final public static function instance()
+    final public static function instance(Array $props = array())
     {
         $obj   = get_called_class();
         $class = __CLASS__;
         if ($obj != $class && is_subclass_of($obj, $class)) {
-            return new $obj;
+            $nobj = new $obj;
+            foreach ($props as $p => $v) {
+                $nobj->$p = $v;
+            }
+            return $nobj;
         }
         throw new ActiveMongo_Exception("Couldn't create an instance of {$obj}");
     }
