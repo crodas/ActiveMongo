@@ -385,7 +385,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final public static function isConnected()
     {
-        return !is_null(self::$_conn) || count(self::$_dbs) > 0 || count(self::$_collections) > 0;
+        return !is_null(self::$_conn) || !empty(self::$_dbs) || !empty(self::$_collections);
     }
     // }}}
 
