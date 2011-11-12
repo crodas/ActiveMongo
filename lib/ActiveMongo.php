@@ -712,9 +712,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'after_drop':
         case 'after_query':
             $fnc    = array($obj, $event);
-            $params = "events_params";
             if (is_callable($fnc)) {
-                call_user_func_array($fnc, $$params);
+                call_user_func_array($fnc, $events_params);
             }
             break;
         }
