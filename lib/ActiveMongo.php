@@ -424,10 +424,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         } else {
             $dbname = self::getDatabaseName();
         }
-        if (!isSet(self::$_dbs[$dbname])) {
+        if (!isset(self::$_dbs[$dbname])) {
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
-        if ( !is_NULL(self::$_user ) &&   !is_NULL(self::$_pwd )  ) {
+        if ( !is_null(self::$_user) && !is_null(self::$_pwd )  ) {
             self::$_dbs[$dbname]->authenticate(self::$_user,self::$_pwd);         
         }
         
