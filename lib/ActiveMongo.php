@@ -383,7 +383,7 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
      */
     final public static function isConnected()
     {
-        return !is_null(self::$_conn) || count(self::$_dbs) > 0 || count(self::$_collections) > 0;
+        return !is_null(self::$_conn) || !empty(self::$_dbs) || !empty(self::$_collections);
     }
     // }}}
 
@@ -422,10 +422,10 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         } else {
             $dbname = self::getDatabaseName();
         }
-        if (!isSet(self::$_dbs[$dbname])) {
+        if (!isset(self::$_dbs[$dbname])) {
             self::$_dbs[$dbname] = self::$_conn->selectDB($dbname);
         }
-        if ( !is_NULL(self::$_user ) &&   !is_NULL(self::$_pwd )  ) {
+        if ( !is_null(self::$_user) && !is_null(self::$_pwd )  ) {
             self::$_dbs[$dbname]->authenticate(self::$_user,self::$_pwd);         
         }
         
@@ -716,9 +716,8 @@ abstract class ActiveMongo implements Iterator, Countable, ArrayAccess
         case 'after_drop':
         case 'after_query':
             $fnc    = array($obj, $event);
-            $params = "events_params";
             if (is_callable($fnc)) {
-                call_user_func_array($fnc, $$params);
+                call_user_func_array($fnc, $events_params);
             }
             break;
         }
