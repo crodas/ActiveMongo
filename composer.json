@@ -1,0 +1,13 @@
+{
+    "name": "crodas/activemongo",
+    "description": "Simple and efficient ActiveRecord data abstraction for MongoDB",
+    "authors": [
+        {
+            "name": "César D. Rodas",
+            "email": "crodas@php.net"
+        }
+    ],
+    "require": {
+
+    }
+}
