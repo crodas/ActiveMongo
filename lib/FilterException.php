@@ -35,11 +35,7 @@
   +---------------------------------------------------------------------------------+
 */
 
-// Class FilterException {{{
-class  ActiveMongo_Exception extends Exception
-{
-}
-// }}}
+namespace ActiveMongo;
 
 // Class FilterException {{{
 /**
@@ -49,7 +45,7 @@ class  ActiveMongo_Exception extends Exception
  *  fails when save() is called.
  *
  */
-class ActiveMongo_FilterException extends ActiveMongo_Exception 
+class FilterException extends \Exception 
 {
 }
 // }}}

@@ -37,91 +37,12 @@
 
 namespace ActiveMongo;
 
-/**
- *  Default validators
- *
- *
- */
-class Validators
+// Class FilterException {{{
+class  Exception extends \Exception
 {
-
-    final private static function _hook($action, $method)
-    {
-        ActiveMongo::addEvent($action, array(__CLASS__, $method));
-    }
-
-    final public static function init() 
-    {
-        self::_hook("before_validate_creation", "presence_of_creation");
-        self::_hook("before_validate_update", "presence_of_update");
-        self::_hook("before_validate", "length_of");
-    }
-
-    // validates_length_of {{{
-    final static function length_of($class, $obj)
-    {
-        $validates = array();
-
-        if (isset_static_variable($class, 'validates_size_of')) {
-            $validates = get_static_variable($class, 'validates_size_of');
-        } else if (isset_static_variable($class, 'validates_length_of')) {
-            $validates = get_static_variables($class, 'validates_length_of');
-        }
-
-        foreach ($validates as $property) {
-            $name = $property[0];
-
-            if (isset($obj[$name])) {
-                $prop = $obj[$name];
-            }
-
-            if (isset($obj['$set'][$name])) {
-                $prop = $obj['$set'][$name];
-            }
-
-            if (isset($prop)) {
-                if (isset($property['min']) && strlen($prop) < $property['min']) {
-                    throw new ActiveMongo_FilterException("{$name} length is too short");
-                }
-                if (isset($property['is']) && strlen($prop) != $property['is']) {
-                    throw new ActiveMongo_FilterException("{$name} length is different than expected");
-                }
-                if (isset($property['max']) && strlen($prop) > $property['max']) {
-                    throw new ActiveMongo_FilterException("{$name} length is too large");
-                }
-            }
-        }
-    }
-    // }}}
-
-    // validates_presence_of {{{
-    final static function presence_of_creation($class, $obj)
-    {
-        if (isset_static_variable($class, 'validates_presence_of')) {
-            foreach ((Array)get_static_variable($class, 'validates_presence_of') as $property) {
-                if (!isset($obj[$property])) {
-                    throw new ActiveMongo_FilterException("Missing required property {$property}"); 
-                }
-            }
-        }
-    }
-
-    final static function presence_of_update($class, $obj)
-    {
-        if (isset_static_variable($class, 'validates_presence_of')) {
-            foreach ((Array)get_static_variable($class,'validates_presence_of') as $property) {
-                if (isset($obj['$unset'][$property])) {
-                    throw new ActiveMongo_FilterException("Cannot delete required property {$property}"); 
-                }
-            }
-        }
-    }
-    // }}}
-
 }
+// }}}
 
-// Register validators
-Validators::init();
 
 /*
  * Local variables:
